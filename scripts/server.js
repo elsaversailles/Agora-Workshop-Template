@@ -1,17 +1,34 @@
 const express = require("express");
+const cors = require("cors");
 const path = require("path");
+const axios = require("axios");
 
-// change the port if necessary
-const PORT = process.env.PORT ? Number(process.env.PORT) : 0; // 0 表示由系统分配可用端口
+// Load environment variables from .env file
+require("dotenv").config({ path: path.join(__dirname, "../.env") });
+
+// Agora Token Generation
+const { RtcTokenBuilder, RtcRole } = require("agora-token");
+
+// Server Configuration - Default port 9001
+const PORT = process.env.PORT ? Number(process.env.PORT) : 9001;
 
 const dir = path.join(__dirname, "../src");
 const app = express();
-app.use(express.static(dir));
 
-// parse JSON bodies from the browser
+// Enable CORS for all origins
+app.use(cors());
+
+// Parse JSON bodies from the browser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve static files
 app.use(express.static(dir));
+
+// Root route
+app.get("/", (req, res) => {
+  res.sendFile(path.join(dir, "index.html"));
+});
 
 // expose a small, safe config endpoint for client-side usage
 // WARNING: Do NOT expose your RESTful API Key and Secret in production environment.
@@ -36,42 +53,42 @@ app.post("/api/convo-ai/start", async (req, res) => {
     const appid = process.env.AGORA_APPID;
     const apiKey = process.env.AGORA_REST_KEY;
     const apiSecret = process.env.AGORA_REST_SECRET;
+    
     if (!appid || !apiKey || !apiSecret) {
-      return res
-        .status(500)
-        .json({ error: "Server misconfigured: missing Agora credentials" });
+      console.error("Missing Agora credentials in .env");
+      return res.status(500).json({ 
+        error: "Server misconfigured: missing Agora credentials" 
+      });
     }
 
+    // Agora Conversational AI API URL
     const url = `https://api.agora.io/api/conversational-ai-agent/v2/projects/${appid}/join`;
-    const basic = Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
+    
+    // Create Basic Auth header
+    const basicAuth = Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
 
-    const response = await fetch(url, {
-      method: "POST",
+    console.log("=== Starting Convo AI ===");
+    console.log("URL:", url);
+    console.log("Request Body:", JSON.stringify(req.body, null, 2));
+
+    // Make request to Agora API using axios
+    const response = await axios.post(url, req.body, {
       headers: {
-        Authorization: `Basic ${basic}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(req.body || {}),
+        "Authorization": `Basic ${basicAuth}`,
+        "Content-Type": "application/json"
+      }
     });
 
-    console.log("Convo API URL ->", url);
-    console.log("Convo API body ->", JSON.stringify(req.body, null, 4));
+    console.log("Agora Response:", JSON.stringify(response.data, null, 2));
+    return res.json(response.data);
 
-
-    const data = await response.text();
-    const status = response.status;
-
-    console.log("Convo API response ->", JSON.stringify(data, null, 4));
-
-    try {
-      // return parsed JSON if possible
-      return res.status(status).json(JSON.parse(data));
-    } catch (e) {
-      return res.status(status).send(data);
-    }
   } catch (err) {
-    console.error("Proxy /api/convo-ai/start error:", err);
-    res.status(500).json({ error: String(err) });
+    console.error("Convo AI Start Error:", err.response?.data || err.message);
+    
+    if (err.response) {
+      return res.status(err.response.status).json(err.response.data);
+    }
+    return res.status(500).json({ error: String(err.message) });
   }
 });
 
@@ -82,40 +99,179 @@ app.post("/api/convo-ai/agents/:agentId/leave", async (req, res) => {
     const appid = process.env.AGORA_APPID;
     const apiKey = process.env.AGORA_REST_KEY;
     const apiSecret = process.env.AGORA_REST_SECRET;
+    
     if (!appid || !apiKey || !apiSecret) {
-      return res
-        .status(500)
-        .json({ error: "Server misconfigured: missing Agora credentials" });
+      return res.status(500).json({ 
+        error: "Server misconfigured: missing Agora credentials" 
+      });
     }
 
     const url = `https://api.agora.io/api/conversational-ai-agent/v2/projects/${appid}/agents/${agentId}/leave`;
-    const basic = Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
+    const basicAuth = Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
 
-    const response = await fetch(url, {
-      method: "POST",
+    console.log("=== Stopping Convo AI ===");
+    console.log("Agent ID:", agentId);
+
+    const response = await axios.post(url, {}, {
       headers: {
-        Authorization: `Basic ${basic}`,
-        "Content-Type": "application/json",
-      },
+        "Authorization": `Basic ${basicAuth}`,
+        "Content-Type": "application/json"
+      }
     });
 
-    const data = await response.text();
-    const status = response.status;
-    try {
-      return res.status(status).json(JSON.parse(data));
-    } catch (e) {
-      return res.status(status).send(data);
-    }
+    console.log("Agent stopped successfully");
+    return res.json(response.data);
+
   } catch (err) {
-    console.error("Proxy /api/convo-ai/leave error:", err);
-    res.status(500).json({ error: String(err) });
+    console.error("Convo AI Leave Error:", err.response?.data || err.message);
+    
+    if (err.response) {
+      return res.status(err.response.status).json(err.response.data);
+    }
+    return res.status(500).json({ error: String(err.message) });
   }
 });
 
+// ===========================================
+// TOKEN GENERATION API
+// ===========================================
+
+// Generate RTC token for a channel
+app.get("/api/token", (req, res) => {
+  const { channelName, uid, role } = req.query;
+  
+  const appId = process.env.AGORA_APPID;
+  const appCertificate = process.env.AGORA_APPCERTIFICATE;
+  
+  if (!appId || !appCertificate) {
+    return res.status(500).json({ error: "Missing Agora credentials" });
+  }
+  
+  if (!channelName) {
+    return res.status(400).json({ error: "channelName is required" });
+  }
+  
+  const userUid = parseInt(uid) || 0;
+  const tokenRole = role === "subscriber" ? RtcRole.SUBSCRIBER : RtcRole.PUBLISHER;
+  
+  // Token expires in 1 hour
+  const expirationTimeInSeconds = 3600;
+  const currentTimestamp = Math.floor(Date.now() / 1000);
+  const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
+  
+  const token = RtcTokenBuilder.buildTokenWithUid(
+    appId,
+    appCertificate,
+    channelName,
+    userUid,
+    tokenRole,
+    privilegeExpiredTs
+  );
+  
+  console.log("Generated token for channel:", channelName, "uid:", userUid);
+  
+  res.json({ token });
+});
+
+// ===========================================
+// VET CALL QUEUE APIs (In-memory for demo)
+// ===========================================
+
+// In-memory call queue storage
+const vetCallQueue = new Map();
+
+// Request a vet call (user submits request)
+app.post("/api/vet-calls/request", (req, res) => {
+  const { channelName, petInfo, triageSummary, requestTime } = req.body;
+  
+  if (!channelName) {
+    return res.status(400).json({ error: "Channel name required" });
+  }
+
+  const callRequest = {
+    channelName,
+    petInfo: petInfo || {},
+    triageSummary: triageSummary || {},
+    requestTime: requestTime || Date.now(),
+    status: "pending",
+    vetJoined: false
+  };
+
+  vetCallQueue.set(channelName, callRequest);
+  console.log("New call request:", channelName);
+
+  res.json({ success: true, channelName });
+});
+
+// Get pending calls (for vet dashboard)
+app.get("/api/vet-calls/pending", (req, res) => {
+  const pending = [];
+  vetCallQueue.forEach((call, channelName) => {
+    if (call.status === "pending") {
+      pending.push({
+        channelName,
+        petInfo: call.petInfo,
+        triageSummary: call.triageSummary,
+        requestTime: call.requestTime,
+        waitTime: Math.floor((Date.now() - call.requestTime) / 1000)
+      });
+    }
+  });
+
+  // Sort by request time (oldest first)
+  pending.sort((a, b) => a.requestTime - b.requestTime);
+
+  res.json({ calls: pending });
+});
+
+// Check call status (for user to know if vet joined)
+app.get("/api/vet-calls/status/:channelName", (req, res) => {
+  const call = vetCallQueue.get(req.params.channelName);
+  
+  if (!call) {
+    return res.status(404).json({ error: "Call not found" });
+  }
+
+  res.json({
+    channelName: req.params.channelName,
+    status: call.status,
+    vetJoined: call.vetJoined
+  });
+});
+
+// Accept a call (vet accepts from dashboard)
+app.post("/api/vet-calls/accept/:channelName", (req, res) => {
+  const call = vetCallQueue.get(req.params.channelName);
+  
+  if (!call) {
+    return res.status(404).json({ error: "Call not found" });
+  }
+
+  call.status = "accepted";
+  call.vetJoined = true;
+  call.acceptedAt = Date.now();
+  
+  console.log("Call accepted:", req.params.channelName);
+  res.json({ success: true, channelName: req.params.channelName });
+});
+
+// Cancel a call request (user cancels or call ends)
+app.post("/api/vet-calls/cancel/:channelName", (req, res) => {
+  const existed = vetCallQueue.delete(req.params.channelName);
+  console.log("Call cancelled:", req.params.channelName, existed ? "(found)" : "(not found)");
+  res.json({ success: true });
+});
+
+// ===========================================
+
 const server = app.listen(PORT, () => {
   const actualPort = server.address().port;
-  const URL = `http://localhost:${actualPort}/example/basic/basicVideoCall/index.html`;
-  console.info(`\n---------------------------------------\n`);
-  console.info(`please visit: ${URL}`);
-  console.info(`\n---------------------------------------\n`);
+  console.log(`\n=======================================`);
+  console.log(`🚀 Server running at http://localhost:${actualPort}`);
+  console.log(`=======================================`);
+  console.log(`\n📋 Available Routes:`);
+  console.log(`   VetAI Triage:    http://localhost:${actualPort}/vet/index.html`);
+  console.log(`   Basic Video:     http://localhost:${actualPort}/example/basic/basicVideoCall/index.html`);
+  console.log(`   Config API:      http://localhost:${actualPort}/config`);
+  console.log(`\n=======================================\n`);
 });

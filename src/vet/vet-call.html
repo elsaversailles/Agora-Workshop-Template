@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vet Call - VetAI Triage</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="vet.css">
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+</head>
+<body>
+  <div class="vet-container">
+    <!-- Header -->
+    <header class="vet-header">
+      <div class="vet-logo">
+        <i class="fas fa-paw"></i>
+        <span>VetAI Triage</span>
+      </div>
+      <p class="vet-subtitle">Voice Call with Patient</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="vet-card" style="padding: 25px;">
+      <div class="vet-conversation">
+        <!-- Call Header -->
+        <div class="vet-conversation-header">
+          <div class="vet-pet-info">
+            <div class="vet-pet-avatar" id="caller-avatar">👤</div>
+            <div class="vet-pet-details">
+              <h3 id="caller-name">Pet Owner</h3>
+              <p id="caller-details">Calling about their pet</p>
+            </div>
+          </div>
+          <div class="vet-status" id="call-status">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Connecting...</span>
+          </div>
+        </div>
+
+        <!-- Audio Indicator -->
+        <div class="vet-audio-container">
+          <div class="vet-audio-indicator" id="audio-indicator">
+            <i class="fas fa-phone"></i>
+          </div>
+          <p class="vet-audio-status" id="audio-status">Connecting to patient...</p>
+          <p class="vet-audio-hint" id="audio-hint">Please wait while we establish the connection.</p>
+          <p id="call-duration" style="font-size: 2rem; font-weight: bold; color: var(--vet-primary); margin-top: 20px;">00:00</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="vet-controls">
+          <button class="vet-control-btn vet-control-btn-mute" id="mute-btn" title="Mute/Unmute" disabled>
+            <i class="fas fa-microphone"></i>
+          </button>
+          <button class="vet-control-btn vet-control-btn-end" id="end-btn" title="End Call">
+            <i class="fas fa-phone-slash"></i>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer Note -->
+    <footer class="vet-footer-note">
+      <i class="fas fa-user-md"></i>
+      You are speaking with a pet owner. Their AI triage summary is available in the dashboard.
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="vet-toast" id="toast"></div>
+
+  <script>
+    /**
+     * ===========================================
+     * HARDCODED VALUES FOR DEMO - EASY TO REPLACE
+     * ===========================================
+     */
+    
+    // ===== HARDCODED VALUES (Replace with server config later) =====
+    const FIXED_CALL_CHANNEL = "vet-human-call";
+    const VET_UID = 20001;  // Vet's user ID
+    // ===============================================================
+
+    // Agora state
+    let client = null;
+    let localAudioTrack = null;
+    let isMuted = false;
+    let callStartTime = null;
+    let durationInterval = null;
+
+    // Config
+    let appId = null;
+    let token = null;
+    let channelName = FIXED_CALL_CHANNEL;
+
+    // DOM Elements
+    const callerAvatar = document.getElementById('caller-avatar');
+    const callerName = document.getElementById('caller-name');
+    const callerDetails = document.getElementById('caller-details');
+    const callStatus = document.getElementById('call-status');
+    const audioIndicator = document.getElementById('audio-indicator');
+    const audioStatus = document.getElementById('audio-status');
+    const audioHint = document.getElementById('audio-hint');
+    const callDuration = document.getElementById('call-duration');
+    const muteBtn = document.getElementById('mute-btn');
+    const endBtn = document.getElementById('end-btn');
+    const toast = document.getElementById('toast');
+
+    // Show toast
+    function showToast(message, duration = 3000) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    // Format duration
+    function formatDuration(seconds) {
+      const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const secs = (seconds % 60).toString().padStart(2, '0');
+      return `${mins}:${secs}`;
+    }
+
+    // Update status UI
+    function updateStatus(status, text) {
+      callStatus.className = 'vet-status';
+      switch (status) {
+        case 'connecting':
+          callStatus.classList.add('vet-status-connecting');
+          callStatus.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i><span>${text}</span>`;
+          break;
+        case 'active':
+          callStatus.classList.add('vet-status-active');
+          callStatus.innerHTML = `<i class="fas fa-circle"></i><span>${text}</span>`;
+          break;
+        case 'ended':
+          callStatus.classList.add('vet-status-ended');
+          callStatus.innerHTML = `<i class="fas fa-circle"></i><span>${text}</span>`;
+          break;
+      }
+    }
+
+    // Load config and generate token from server
+    async function loadConfig() {
+      try {
+        const res = await fetch('/config');
+        const cfg = await res.json();
+        appId = cfg.AGORA_APPID;
+        
+        // Generate a fresh token for this channel and vet user
+        const tokenRes = await fetch(`/api/token?channelName=${channelName}&uid=${VET_UID}&role=publisher`);
+        const tokenData = await tokenRes.json();
+        token = tokenData.token;
+        
+        console.log('Got token for channel:', channelName, 'uid:', VET_UID);
+        return true;
+      } catch (e) {
+        console.error('Failed to load config:', e);
+        return false;
+      }
+    }
+
+    // Initialize Agora client
+    function initClient() {
+      client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+
+      client.on('user-published', async (user, mediaType) => {
+        await client.subscribe(user, mediaType);
+        console.log('Subscribed to user:', user.uid, mediaType);
+
+        if (mediaType === 'audio') {
+          user.audioTrack.play();
+          audioIndicator.classList.add('speaking');
+          audioStatus.textContent = 'Patient is speaking...';
+        }
+      });
+
+      client.on('user-unpublished', (user, mediaType) => {
+        console.log('User unpublished:', user.uid, mediaType);
+        if (mediaType === 'audio') {
+          audioIndicator.classList.remove('speaking');
+          audioStatus.textContent = 'In call';
+        }
+      });
+
+      client.on('user-joined', (user) => {
+        console.log('User joined:', user.uid);
+        showToast('Patient connected!');
+        audioStatus.textContent = 'Patient connected';
+      });
+
+      client.on('user-left', (user) => {
+        console.log('User left:', user.uid);
+        showToast('Patient has left the call');
+        audioStatus.textContent = 'Patient disconnected';
+      });
+    }
+
+    // Join channel and start call
+    async function joinCall() {
+      try {
+        updateStatus('connecting', 'Connecting...');
+        
+        // Join channel as vet with dynamic token
+        await client.join(appId, channelName, token, VET_UID);
+        console.log('Joined channel:', channelName, 'as UID:', VET_UID);
+
+        // Create and publish audio track
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        await client.publish([localAudioTrack]);
+        console.log('Published audio track');
+
+        // Update UI
+        updateStatus('active', 'Connected');
+        audioStatus.textContent = 'Waiting for patient to connect...';
+        audioHint.textContent = 'Speak clearly when the patient joins.';
+        muteBtn.disabled = false;
+
+        // Start duration timer
+        callStartTime = Date.now();
+        durationInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+          callDuration.textContent = formatDuration(elapsed);
+        }, 1000);
+
+        showToast('Connected! Waiting for patient...');
+      } catch (e) {
+        console.error('Failed to join call:', e);
+        showToast('Failed to connect. Please try again.');
+        updateStatus('ended', 'Connection Failed');
+      }
+    }
+
+    // Toggle mute
+    function toggleMute() {
+      if (!localAudioTrack) return;
+
+      isMuted = !isMuted;
+      localAudioTrack.setEnabled(!isMuted);
+
+      muteBtn.classList.toggle('muted', isMuted);
+      muteBtn.innerHTML = isMuted
+        ? '<i class="fas fa-microphone-slash"></i>'
+        : '<i class="fas fa-microphone"></i>';
+
+      showToast(isMuted ? 'Muted' : 'Unmuted');
+    }
+
+    // End call
+    async function endCall() {
+      // Stop timer
+      if (durationInterval) {
+        clearInterval(durationInterval);
+      }
+
+      // Close audio track
+      if (localAudioTrack) {
+        localAudioTrack.close();
+        localAudioTrack = null;
+      }
+
+      // Leave channel
+      if (client) {
+        await client.leave();
+      }
+
+      // Clear call accepted flag
+      localStorage.removeItem('vetai_call_accepted');
+      localStorage.removeItem('vetai_call_channel');
+
+      // Go back to dashboard
+      window.location.href = 'vet-dashboard.html';
+    }
+
+    // Check auth
+    function checkAuth() {
+      const session = sessionStorage.getItem('vetai_vet_session');
+      if (!session) {
+        window.location.href = 'vet-login.html';
+        return false;
+      }
+      return true;
+    }
+
+    // Initialize
+    async function init() {
+      if (!checkAuth()) return;
+
+      // Get call info from session
+      const callInfo = sessionStorage.getItem('vetai_active_call');
+      if (callInfo) {
+        const info = JSON.parse(callInfo);
+        channelName = info.channelName || FIXED_CALL_CHANNEL;
+        callerDetails.textContent = `Channel: ${channelName}`;
+      }
+
+      // Load config
+      const configLoaded = await loadConfig();
+      if (!configLoaded) {
+        showToast('Configuration error');
+        return;
+      }
+
+      // Initialize client
+      initClient();
+
+      // Join the call
+      await joinCall();
+    }
+
+    // Event listeners
+    muteBtn.addEventListener('click', toggleMute);
+    endBtn.addEventListener('click', () => {
+      if (confirm('Are you sure you want to end this call?')) {
+        endCall();
+      }
+    });
+
+    // Start
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

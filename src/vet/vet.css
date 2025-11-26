@@ -1,0 +1,1070 @@
+/* Veterinary AI Triage - Custom Styles */
+
+:root {
+  --vet-primary: #2E7D32;
+  --vet-primary-light: #4CAF50;
+  --vet-primary-dark: #1B5E20;
+  --vet-secondary: #81C784;
+  --vet-accent: #FF9800;
+  --vet-bg-light: #F1F8E9;
+  --vet-bg-white: #FFFFFF;
+  --vet-text-dark: #263238;
+  --vet-text-muted: #607D8B;
+  --vet-danger: #E53935;
+  --vet-warning: #FFA726;
+  --vet-info: #29B6F6;
+  --vet-success: #66BB6A;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--vet-bg-light);
+  color: var(--vet-text-dark);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+/* Container */
+.vet-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.vet-header {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.vet-logo {
+  font-size: 2.5rem;
+  color: var(--vet-primary);
+  margin-bottom: 10px;
+}
+
+.vet-logo i {
+  margin-right: 10px;
+}
+
+.vet-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--vet-primary-dark);
+  margin: 0;
+}
+
+.vet-subtitle {
+  font-size: 1.1rem;
+  color: var(--vet-text-muted);
+  margin-top: 5px;
+}
+
+/* Main Content Card */
+.vet-card {
+  background: var(--vet-bg-white);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 40px;
+  margin: 20px 0;
+  flex: 1;
+}
+
+.vet-card-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.vet-card-title {
+  font-size: 1.5rem;
+  color: var(--vet-primary-dark);
+  margin-bottom: 10px;
+}
+
+.vet-card-description {
+  color: var(--vet-text-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+/* Hero Section - Introduction Page */
+.vet-hero {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.vet-hero-icon {
+  font-size: 5rem;
+  color: var(--vet-primary);
+  margin-bottom: 20px;
+}
+
+.vet-hero-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--vet-primary-dark);
+  margin-bottom: 15px;
+}
+
+.vet-hero-text {
+  font-size: 1.2rem;
+  color: var(--vet-text-muted);
+  max-width: 700px;
+  margin: 0 auto 30px;
+  line-height: 1.8;
+}
+
+/* Features Grid */
+.vet-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 25px;
+  margin: 40px 0;
+}
+
+.vet-feature {
+  background: var(--vet-bg-light);
+  border-radius: 12px;
+  padding: 25px;
+  text-align: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.vet-feature:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(46, 125, 50, 0.15);
+}
+
+.vet-feature-icon {
+  font-size: 2.5rem;
+  color: var(--vet-primary);
+  margin-bottom: 15px;
+}
+
+.vet-feature-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--vet-primary-dark);
+  margin-bottom: 10px;
+}
+
+.vet-feature-text {
+  font-size: 0.95rem;
+  color: var(--vet-text-muted);
+  line-height: 1.5;
+}
+
+/* Form Styles */
+.vet-form {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.vet-form-group {
+  margin-bottom: 25px;
+}
+
+.vet-form-label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--vet-text-dark);
+  margin-bottom: 8px;
+}
+
+.vet-form-label i {
+  margin-right: 8px;
+  color: var(--vet-primary);
+}
+
+.vet-form-control {
+  width: 100%;
+  padding: 15px 20px;
+  font-size: 1rem;
+  border: 2px solid #E0E0E0;
+  border-radius: 10px;
+  background: var(--vet-bg-white);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.vet-form-control:focus {
+  outline: none;
+  border-color: var(--vet-primary);
+  box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.1);
+}
+
+.vet-form-control::placeholder {
+  color: #BDBDBD;
+}
+
+/* Pet Type Selection */
+.vet-pet-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.vet-pet-type {
+  background: var(--vet-bg-light);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 20px 15px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.vet-pet-type:hover {
+  border-color: var(--vet-secondary);
+}
+
+.vet-pet-type.selected {
+  border-color: var(--vet-primary);
+  background: rgba(46, 125, 50, 0.1);
+}
+
+.vet-pet-type-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.vet-pet-type-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--vet-text-dark);
+}
+
+/* Buttons */
+.vet-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 15px 40px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+}
+
+.vet-btn-primary {
+  background: linear-gradient(135deg, var(--vet-primary), var(--vet-primary-light));
+  color: white;
+  box-shadow: 0 4px 15px rgba(46, 125, 50, 0.3);
+}
+
+.vet-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
+}
+
+.vet-btn-secondary {
+  background: var(--vet-bg-light);
+  color: var(--vet-primary-dark);
+  border: 2px solid var(--vet-primary);
+}
+
+.vet-btn-secondary:hover {
+  background: var(--vet-primary);
+  color: white;
+}
+
+.vet-btn-danger {
+  background: var(--vet-danger);
+  color: white;
+}
+
+.vet-btn-danger:hover {
+  background: #C62828;
+}
+
+.vet-btn-lg {
+  padding: 18px 50px;
+  font-size: 1.2rem;
+}
+
+.vet-btn-block {
+  width: 100%;
+}
+
+.vet-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Button Group */
+.vet-btn-group {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+/* Conversation Page Styles */
+.vet-conversation {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 200px);
+  min-height: 400px;
+}
+
+.vet-conversation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px;
+  background: var(--vet-bg-white);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.vet-pet-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.vet-pet-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--vet-bg-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+}
+
+.vet-pet-details h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--vet-text-dark);
+}
+
+.vet-pet-details p {
+  margin: 5px 0 0;
+  font-size: 0.9rem;
+  color: var(--vet-text-muted);
+}
+
+.vet-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.vet-status-connecting {
+  background: #FFF3E0;
+  color: #E65100;
+}
+
+.vet-status-active {
+  background: #E8F5E9;
+  color: var(--vet-primary-dark);
+}
+
+.vet-status-ended {
+  background: #FFEBEE;
+  color: var(--vet-danger);
+}
+
+/* Audio Indicator */
+.vet-audio-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--vet-bg-white);
+  border-radius: 16px;
+  padding: 40px;
+}
+
+/* Video Container Styles */
+.vet-video-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: #1a1a2e;
+  border-radius: 16px;
+  overflow: hidden;
+  min-height: 400px;
+}
+
+/* Remote Video (Full size) */
+.vet-remote-video {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vet-remote-video .remote-player-wrapper {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.vet-remote-video .remote-player {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.vet-remote-video .remote-player video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.vet-remote-video .remote-player-name {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  z-index: 5;
+}
+
+/* Video Placeholder (when no remote video) */
+.vet-video-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  color: white;
+}
+
+.vet-video-placeholder .vet-audio-indicator {
+  background: linear-gradient(135deg, var(--vet-primary-light), var(--vet-primary));
+}
+
+.vet-video-placeholder .vet-audio-status {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.vet-video-placeholder .vet-audio-hint {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Local Video (Picture-in-Picture) */
+.vet-local-video {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 180px;
+  height: 135px;
+  border-radius: 12px;
+  border: 3px solid white;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+  overflow: hidden;
+  background: #2d2d44;
+}
+
+.vet-local-video video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+.vet-local-player-name {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  z-index: 5;
+}
+
+.vet-audio-indicator {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--vet-primary-light), var(--vet-primary));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.vet-audio-indicator::before,
+.vet-audio-indicator::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid var(--vet-primary-light);
+  animation: pulse 2s ease-out infinite;
+}
+
+.vet-audio-indicator::before {
+  width: 180px;
+  height: 180px;
+  animation-delay: 0s;
+}
+
+.vet-audio-indicator::after {
+  width: 210px;
+  height: 210px;
+  animation-delay: 0.5s;
+}
+
+.vet-audio-indicator.speaking::before,
+.vet-audio-indicator.speaking::after {
+  animation-duration: 0.8s;
+}
+
+.vet-audio-indicator.inactive::before,
+.vet-audio-indicator.inactive::after {
+  animation: none;
+  opacity: 0.3;
+}
+
+.vet-audio-indicator i {
+  font-size: 4rem;
+  color: white;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+.vet-audio-status {
+  font-size: 1.2rem;
+  color: var(--vet-text-muted);
+  margin-bottom: 10px;
+}
+
+.vet-audio-hint {
+  font-size: 0.95rem;
+  color: var(--vet-text-muted);
+  text-align: center;
+  max-width: 400px;
+}
+
+/* Conversation Controls */
+.vet-controls {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  padding: 30px;
+  background: var(--vet-bg-white);
+  border-radius: 12px;
+  margin-top: 20px;
+}
+
+.vet-control-btn {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vet-control-btn-mute {
+  background: #E3F2FD;
+  color: #1976D2;
+}
+
+.vet-control-btn-mute.muted {
+  background: #FFCDD2;
+  color: var(--vet-danger);
+}
+
+.vet-control-btn-video {
+  background: #E3F2FD;
+  color: #1976D2;
+}
+
+.vet-control-btn-video.disabled {
+  background: #FFCDD2;
+  color: var(--vet-danger);
+}
+
+.vet-control-btn-end {
+  background: var(--vet-danger);
+  color: white;
+  width: 80px;
+  height: 80px;
+  font-size: 1.8rem;
+}
+
+.vet-control-btn-end:hover {
+  background: #C62828;
+  transform: scale(1.05);
+}
+
+.vet-control-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Summary Page Styles */
+.vet-summary {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.vet-summary-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.vet-summary-icon {
+  font-size: 4rem;
+  color: var(--vet-success);
+  margin-bottom: 15px;
+}
+
+.vet-summary-section {
+  background: var(--vet-bg-light);
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 20px;
+}
+
+.vet-summary-section h4 {
+  font-size: 1.1rem;
+  color: var(--vet-primary-dark);
+  margin: 0 0 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vet-summary-section h4 i {
+  color: var(--vet-primary);
+}
+
+.vet-summary-content {
+  color: var(--vet-text-dark);
+  line-height: 1.7;
+}
+
+.vet-summary-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.vet-summary-list li {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.vet-summary-list li:last-child {
+  border-bottom: none;
+}
+
+.vet-summary-list li i {
+  color: var(--vet-primary);
+  margin-top: 3px;
+}
+
+/* Urgency Indicator */
+.vet-urgency {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.vet-urgency-low {
+  background: #E8F5E9;
+  color: var(--vet-success);
+}
+
+.vet-urgency-medium {
+  background: #FFF3E0;
+  color: var(--vet-warning);
+}
+
+.vet-urgency-high {
+  background: #FFEBEE;
+  color: var(--vet-danger);
+}
+
+/* Footer Note */
+.vet-footer-note {
+  text-align: center;
+  padding: 20px;
+  color: var(--vet-text-muted);
+  font-size: 0.9rem;
+  border-top: 1px solid #E0E0E0;
+  margin-top: 20px;
+}
+
+.vet-footer-note i {
+  color: var(--vet-warning);
+  margin-right: 5px;
+}
+
+/* Loading Overlay */
+.vet-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.vet-loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid var(--vet-bg-light);
+  border-top-color: var(--vet-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vet-loading-text {
+  font-size: 1.1rem;
+  color: var(--vet-text-muted);
+}
+
+/* Toast/Notification Styles */
+.vet-toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--vet-text-dark);
+  color: white;
+  padding: 15px 30px;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  display: none;
+}
+
+.vet-toast.show {
+  display: block;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive Styles */
+
+/* Tablet */
+@media (max-width: 992px) {
+  .vet-hero-title {
+    font-size: 2rem;
+  }
+  
+  .vet-hero-text {
+    font-size: 1.1rem;
+  }
+  
+  .vet-card {
+    padding: 30px;
+  }
+  
+  .vet-features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile Landscape */
+@media (max-width: 768px) {
+  .vet-container {
+    padding: 15px;
+  }
+  
+  .vet-header {
+    padding: 15px 0;
+  }
+  
+  .vet-logo {
+    font-size: 2rem;
+  }
+  
+  .vet-title {
+    font-size: 1.5rem;
+  }
+  
+  .vet-hero-icon {
+    font-size: 3.5rem;
+  }
+  
+  .vet-hero-title {
+    font-size: 1.75rem;
+  }
+  
+  .vet-hero-text {
+    font-size: 1rem;
+  }
+  
+  .vet-card {
+    padding: 25px;
+    margin: 15px 0;
+  }
+  
+  .vet-features {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .vet-btn {
+    padding: 12px 30px;
+    font-size: 1rem;
+  }
+  
+  .vet-btn-lg {
+    padding: 15px 40px;
+    font-size: 1.1rem;
+  }
+  
+  .vet-conversation-header {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .vet-pet-info {
+    flex-direction: column;
+  }
+  
+  .vet-audio-indicator {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .vet-audio-indicator i {
+    font-size: 3rem;
+  }
+  
+  .vet-audio-indicator::before {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .vet-audio-indicator::after {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .vet-control-btn {
+    width: 60px;
+    height: 60px;
+    font-size: 1.3rem;
+  }
+  
+  .vet-control-btn-end {
+    width: 70px;
+    height: 70px;
+    font-size: 1.5rem;
+  }
+  
+  /* Video responsive */
+  .vet-video-container {
+    min-height: 300px;
+  }
+  
+  .vet-local-video {
+    width: 140px;
+    height: 105px;
+    bottom: 15px;
+    right: 15px;
+  }
+}
+
+/* Mobile Portrait */
+@media (max-width: 576px) {
+  .vet-container {
+    padding: 10px;
+  }
+  
+  .vet-logo {
+    font-size: 1.8rem;
+  }
+  
+  .vet-title {
+    font-size: 1.3rem;
+  }
+  
+  .vet-subtitle {
+    font-size: 0.95rem;
+  }
+  
+  .vet-hero-icon {
+    font-size: 3rem;
+  }
+  
+  .vet-hero-title {
+    font-size: 1.5rem;
+  }
+  
+  .vet-hero-text {
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+  }
+  
+  .vet-card {
+    padding: 20px;
+    border-radius: 12px;
+  }
+  
+  .vet-feature {
+    padding: 20px;
+  }
+  
+  .vet-feature-icon {
+    font-size: 2rem;
+  }
+  
+  .vet-pet-types {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+  
+  .vet-pet-type {
+    padding: 15px 10px;
+  }
+  
+  .vet-pet-type-icon {
+    font-size: 1.5rem;
+  }
+  
+  .vet-pet-type-name {
+    font-size: 0.8rem;
+  }
+  
+  .vet-form-control {
+    padding: 12px 15px;
+  }
+  
+  .vet-btn-group {
+    flex-direction: column;
+  }
+  
+  .vet-btn-group .vet-btn {
+    width: 100%;
+  }
+  
+  .vet-audio-container {
+    padding: 25px;
+  }
+  
+  .vet-audio-indicator {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .vet-audio-indicator i {
+    font-size: 2.5rem;
+  }
+  
+  .vet-audio-indicator::before {
+    width: 130px;
+    height: 130px;
+  }
+  
+  .vet-audio-indicator::after {
+    width: 160px;
+    height: 160px;
+  }
+  
+  .vet-controls {
+    padding: 20px;
+    gap: 15px;
+  }
+  
+  .vet-summary-section {
+    padding: 20px;
+  }
+  
+  /* Video responsive - mobile portrait */
+  .vet-video-container {
+    min-height: 250px;
+  }
+  
+  .vet-local-video {
+    width: 100px;
+    height: 75px;
+    bottom: 10px;
+    right: 10px;
+    border-width: 2px;
+  }
+  
+  .vet-local-player-name {
+    font-size: 0.65rem;
+    padding: 2px 5px;
+  }
+}
+
+/* Dark mode support (optional) */
+@media (prefers-color-scheme: dark) {
+  /* Can be enabled later if needed */
+}

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Consultation - VetAI Triage</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="vet.css">
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+</head>
+<body>
+  <div class="vet-container">
+    <!-- Header -->
+    <header class="vet-header">
+      <div class="vet-logo">
+        <i class="fas fa-paw"></i>
+        <span>VetAI Triage</span>
+      </div>
+      <p class="vet-subtitle">AI Consultation in Progress</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="vet-card" style="padding: 20px;">
+      <div class="vet-conversation">
+        <!-- Conversation Header with Pet Info -->
+        <div class="vet-conversation-header">
+          <div class="vet-pet-info">
+            <div class="vet-pet-avatar" id="pet-avatar">🐾</div>
+            <div class="vet-pet-details">
+              <h3 id="pet-name-display">Your Pet</h3>
+              <p id="pet-type-display">Pet Type</p>
+            </div>
+          </div>
+          <div class="vet-status vet-status-connecting" id="connection-status">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span>Connecting...</span>
+          </div>
+        </div>
+
+        <!-- Video Container -->
+        <div class="vet-video-container">
+          <!-- Remote Video (AI/Vet) -->
+          <div id="remote-playerlist" class="vet-remote-video">
+            <!-- Remote video players will be dynamically added here -->
+            <div class="vet-video-placeholder" id="video-placeholder">
+              <div class="vet-audio-indicator inactive" id="audio-indicator">
+                <i class="fas fa-user-md"></i>
+              </div>
+              <p class="vet-audio-status" id="audio-status">Initializing...</p>
+              <p class="vet-audio-hint" id="audio-hint">
+                Please wait while we connect you to our AI veterinary assistant.
+              </p>
+            </div>
+          </div>
+          
+          <!-- Local Video (Self/Picture-in-Picture) -->
+          <div id="local-player" class="vet-local-video">
+            <div class="vet-local-player-name" id="local-player-name">You</div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="vet-controls">
+          <button class="vet-control-btn vet-control-btn-mute" id="mute-btn" title="Mute/Unmute" disabled>
+            <i class="fas fa-microphone"></i>
+          </button>
+          <button class="vet-control-btn vet-control-btn-video" id="video-btn" title="Camera On/Off" disabled>
+            <i class="fas fa-video"></i>
+          </button>
+          <button class="vet-control-btn vet-control-btn-end" id="end-btn" title="End Conversation">
+            <i class="fas fa-phone-slash"></i>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer Note -->
+    <footer class="vet-footer-note">
+      <i class="fas fa-info-circle"></i>
+      Speak clearly about your pet's symptoms. The AI will guide you through the assessment.
+    </footer>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="vet-loading" id="loading-overlay" style="display: none;">
+    <div class="vet-loading-spinner"></div>
+    <p class="vet-loading-text" id="loading-text">Connecting to AI assistant...</p>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="vet-toast" id="toast"></div>
+
+  <!-- Confirmation Modal -->
+  <div id="confirm-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1002; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 16px; max-width: 400px; margin: 20px; text-align: center;">
+      <i class="fas fa-question-circle" style="font-size: 3rem; color: var(--vet-warning); margin-bottom: 15px;"></i>
+      <h3 style="margin: 0 0 10px; color: var(--vet-text-dark);">End Conversation?</h3>
+      <p style="color: var(--vet-text-muted); margin-bottom: 25px;">
+        Are you sure you want to end this consultation? You'll receive a summary of the conversation.
+      </p>
+      <div class="vet-btn-group">
+        <button class="vet-btn vet-btn-secondary" id="cancel-end">Cancel</button>
+        <button class="vet-btn vet-btn-danger" id="confirm-end">End Session</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="conversation.js"></script>
+</body>
+</html>

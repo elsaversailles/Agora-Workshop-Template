@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waiting for Vet - VetAI Triage</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="vet.css">
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+</head>
+<body>
+  <div class="vet-container">
+    <!-- Header -->
+    <header class="vet-header">
+      <div class="vet-logo">
+        <i class="fas fa-paw"></i>
+        <span>VetAI Triage</span>
+      </div>
+      <p class="vet-subtitle">Connecting with a Veterinarian</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="vet-card" style="padding: 25px;">
+      <div class="vet-conversation">
+        <!-- Status Display -->
+        <div class="vet-conversation-header">
+          <div class="vet-pet-info">
+            <div class="vet-pet-avatar" id="pet-avatar">🐕</div>
+            <div class="vet-pet-details">
+              <h3 id="pet-name">Your Pet</h3>
+              <p id="pet-details">Loading...</p>
+            </div>
+          </div>
+          <div class="vet-status vet-status-connecting" id="call-status">
+            <i class="fas fa-circle-notch fa-spin"></i>
+            <span id="status-text">Requesting Call...</span>
+          </div>
+        </div>
+
+        <!-- Waiting/Call UI -->
+        <div class="vet-audio-container">
+          <div class="vet-audio-indicator" id="audio-indicator">
+            <i class="fas fa-user-md" id="call-icon"></i>
+          </div>
+          <p class="vet-audio-status" id="audio-status">Requesting a veterinarian...</p>
+          <p class="vet-audio-hint" id="audio-hint">A vet will be with you shortly. Please ensure your microphone is ready.</p>
+          <p id="call-duration" style="font-size: 2rem; font-weight: bold; color: var(--vet-primary); margin-top: 20px; display: none;">00:00</p>
+        </div>
+
+        <!-- Queue Position -->
+        <div id="queue-info" style="text-align: center; margin: 20px 0; display: none;">
+          <p style="font-size: 1.1rem; color: var(--text-secondary);">Estimated wait time:</p>
+          <p style="font-size: 1.5rem; font-weight: bold; color: var(--vet-primary);" id="wait-time">~2 minutes</p>
+        </div>
+
+        <!-- Controls -->
+        <div class="vet-controls" id="controls" style="display: none;">
+          <button class="vet-control-btn vet-control-btn-mute" id="mute-btn" title="Mute/Unmute" disabled>
+            <i class="fas fa-microphone"></i>
+          </button>
+          <button class="vet-control-btn vet-control-btn-end" id="end-btn" title="Cancel Call">
+            <i class="fas fa-phone-slash"></i>
+          </button>
+        </div>
+
+        <!-- Cancel Button (shown while waiting) -->
+        <div id="waiting-controls" style="text-align: center; margin-top: 30px;">
+          <button class="vet-btn vet-btn-secondary" id="cancel-btn">
+            <i class="fas fa-times"></i> Cancel Request
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Triage Summary -->
+    <div class="vet-card" id="summary-card" style="padding: 20px; margin-top: 20px;">
+      <h4 style="color: var(--vet-primary); margin-bottom: 15px;">
+        <i class="fas fa-clipboard-list"></i> Your Triage Summary
+      </h4>
+      <div id="summary-content">
+        <p><strong>Urgency:</strong> <span id="urgency-level">Medium</span></p>
+        <p style="margin-top: 10px;"><strong>AI Recommendation:</strong></p>
+        <p id="recommendation-text" style="color: var(--text-secondary); margin-top: 5px;">Loading...</p>
+      </div>
+    </div>
+
+    <!-- Footer Note -->
+    <footer class="vet-footer-note">
+      <i class="fas fa-phone"></i>
+      A veterinarian will join this call to discuss your pet's condition.
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="vet-toast" id="toast"></div>
+
+  <script>
+    /**
+     * ===========================================
+     * HARDCODED VALUES FOR DEMO - EASY TO REPLACE
+     * ===========================================
+     */
+    
+    // ===== HARDCODED VALUES (Replace with server config later) =====
+    const FIXED_CALL_CHANNEL = "vet-human-call";
+    const USER_UID = 20000;  // User's ID for calls
+    // ===============================================================
+
+    // Agora state
+    let client = null;
+    let localAudioTrack = null;
+    let isMuted = false;
+    let callStartTime = null;
+    let durationInterval = null;
+    let statusPollInterval = null;
+    let isInCall = false;
+
+    // Config
+    let appId = null;
+    let token = null;
+    let channelName = FIXED_CALL_CHANNEL;  // Set channel name immediately to fix null token issue
+
+    // Pet info
+    let petInfo = null;
+    let triageSummary = null;
+
+    // DOM Elements
+    const petAvatar = document.getElementById('pet-avatar');
+    const petName = document.getElementById('pet-name');
+    const petDetails = document.getElementById('pet-details');
+    const callStatus = document.getElementById('call-status');
+    const statusText = document.getElementById('status-text');
+    const audioIndicator = document.getElementById('audio-indicator');
+    const callIcon = document.getElementById('call-icon');
+    const audioStatus = document.getElementById('audio-status');
+    const audioHint = document.getElementById('audio-hint');
+    const callDuration = document.getElementById('call-duration');
+    const queueInfo = document.getElementById('queue-info');
+    const waitTime = document.getElementById('wait-time');
+    const controls = document.getElementById('controls');
+    const waitingControls = document.getElementById('waiting-controls');
+    const muteBtn = document.getElementById('mute-btn');
+    const endBtn = document.getElementById('end-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    const urgencyLevel = document.getElementById('urgency-level');
+    const recommendationText = document.getElementById('recommendation-text');
+    const toast = document.getElementById('toast');
+
+    // Show toast
+    function showToast(message, duration = 3000) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    // Format duration
+    function formatDuration(seconds) {
+      const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+      const secs = (seconds % 60).toString().padStart(2, '0');
+      return `${mins}:${secs}`;
+    }
+
+    // Pet emoji mapping
+    function getPetEmoji(petType) {
+      const emojis = {
+        dog: '🐕', cat: '🐱', bird: '🐦', rabbit: '🐰',
+        hamster: '🐹', fish: '🐟', reptile: '🦎', other: '🐾'
+      };
+      return emojis[petType] || '🐾';
+    }
+
+    // Update status UI
+    function updateStatus(status, text) {
+      callStatus.className = 'vet-status';
+      statusText.textContent = text;
+      
+      switch (status) {
+        case 'waiting':
+          callStatus.classList.add('vet-status-connecting');
+          callStatus.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i><span>${text}</span>`;
+          break;
+        case 'connecting':
+          callStatus.classList.add('vet-status-connecting');
+          callStatus.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i><span>${text}</span>`;
+          break;
+        case 'active':
+          callStatus.classList.add('vet-status-active');
+          callStatus.innerHTML = `<i class="fas fa-circle"></i><span>${text}</span>`;
+          break;
+        case 'ended':
+          callStatus.classList.add('vet-status-ended');
+          callStatus.innerHTML = `<i class="fas fa-circle"></i><span>${text}</span>`;
+          break;
+      }
+    }
+
+    // Load config and generate token from server
+    async function loadConfig() {
+      try {
+        const res = await fetch('/config');
+        const cfg = await res.json();
+        appId = cfg.AGORA_APPID;
+        
+        // Generate a fresh token for this channel and user
+        const tokenRes = await fetch(`/api/token?channelName=${channelName}&uid=${USER_UID}&role=publisher`);
+        const tokenData = await tokenRes.json();
+        token = tokenData.token;
+        
+        console.log('Got token for channel:', channelName, 'uid:', USER_UID);
+        return true;
+      } catch (e) {
+        console.error('Failed to load config:', e);
+        return false;
+      }
+    }
+
+    // Load pet info from session
+    function loadPetInfo() {
+      const stored = sessionStorage.getItem('vetai_pet_info');
+      if (stored) {
+        petInfo = JSON.parse(stored);
+        petAvatar.textContent = getPetEmoji(petInfo.petType);
+        petName.textContent = petInfo.petName || 'Your Pet';
+        petDetails.textContent = `${petInfo.petType}, ${petInfo.petAge}`;
+      }
+
+      // Load triage summary
+      const summary = sessionStorage.getItem('vetai_triage_summary');
+      if (summary) {
+        triageSummary = JSON.parse(summary);
+        urgencyLevel.textContent = triageSummary.urgency || 'Medium';
+        recommendationText.textContent = triageSummary.recommendation || 'Based on the symptoms described, we recommend speaking with a veterinarian.';
+      } else {
+        // Mock data
+        urgencyLevel.textContent = 'Medium';
+        recommendationText.textContent = 'Based on the symptoms described, we recommend speaking with a veterinarian for further evaluation.';
+      }
+    }
+
+    // Request call from vet
+    async function requestVetCall() {
+      try {
+        // Use fixed channel name for demo (both user and vet join same channel)
+        channelName = FIXED_CALL_CHANNEL;
+        
+        const res = await fetch('/api/vet-calls/request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            channelName,
+            petInfo,
+            triageSummary,
+            requestTime: Date.now()
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Call requested:', data);
+          showToast('Call request sent to veterinarians');
+          
+          // Show queue info
+          queueInfo.style.display = 'block';
+          
+          // Start polling for call status
+          startStatusPolling();
+        } else {
+          throw new Error('Failed to request call');
+        }
+      } catch (e) {
+        console.error('Failed to request call:', e);
+        showToast('Failed to connect. Please try again.');
+      }
+    }
+
+    // Poll for call status
+    function startStatusPolling() {
+      statusPollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/vet-calls/status/${channelName}`);
+          const data = await res.json();
+          
+          if (data.vetJoined && !isInCall) {
+            // Vet has joined! Connect to the call
+            clearInterval(statusPollInterval);
+            showToast('Vet is connecting!');
+            joinCall();
+          }
+        } catch (e) {
+          console.error('Status poll error:', e);
+        }
+      }, 3000);
+    }
+
+    // Initialize Agora client
+    function initClient() {
+      client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+
+      client.on('user-published', async (user, mediaType) => {
+        await client.subscribe(user, mediaType);
+        console.log('Subscribed to vet:', user.uid, mediaType);
+
+        if (mediaType === 'audio') {
+          user.audioTrack.play();
+          audioIndicator.classList.add('speaking');
+          audioStatus.textContent = 'Vet is speaking...';
+        }
+      });
+
+      client.on('user-unpublished', (user, mediaType) => {
+        if (mediaType === 'audio') {
+          audioIndicator.classList.remove('speaking');
+          audioStatus.textContent = 'In call with vet';
+        }
+      });
+
+      client.on('user-joined', (user) => {
+        console.log('Vet joined:', user.uid);
+        showToast('Veterinarian connected!');
+        
+        // Update UI for active call
+        isInCall = true;
+        updateStatus('active', 'In Call');
+        audioStatus.textContent = 'Connected with veterinarian';
+        audioHint.textContent = 'Speak clearly about your pet\'s condition.';
+        callIcon.className = 'fas fa-phone';
+        queueInfo.style.display = 'none';
+        waitingControls.style.display = 'none';
+        controls.style.display = 'flex';
+        callDuration.style.display = 'block';
+        muteBtn.disabled = false;
+
+        // Start duration timer
+        callStartTime = Date.now();
+        durationInterval = setInterval(() => {
+          const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+          callDuration.textContent = formatDuration(elapsed);
+        }, 1000);
+      });
+
+      client.on('user-left', (user) => {
+        console.log('Vet left:', user.uid);
+        showToast('Veterinarian has ended the call');
+        endCall(false);
+      });
+    }
+
+    // Join channel
+    async function joinCall() {
+      try {
+        updateStatus('connecting', 'Connecting...');
+        audioStatus.textContent = 'Connecting to veterinarian...';
+
+        // Join channel with dynamic token
+        await client.join(appId, channelName, token, USER_UID);
+        console.log('Joined channel:', channelName, 'as UID:', USER_UID);
+
+        // Create and publish audio track
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        await client.publish([localAudioTrack]);
+        console.log('Published audio track');
+
+        showToast('Connected! Waiting for vet...');
+      } catch (e) {
+        console.error('Failed to join call:', e);
+        showToast('Failed to connect. Please try again.');
+        updateStatus('ended', 'Connection Failed');
+      }
+    }
+
+    // Toggle mute
+    function toggleMute() {
+      if (!localAudioTrack) return;
+
+      isMuted = !isMuted;
+      localAudioTrack.setEnabled(!isMuted);
+
+      muteBtn.classList.toggle('muted', isMuted);
+      muteBtn.innerHTML = isMuted
+        ? '<i class="fas fa-microphone-slash"></i>'
+        : '<i class="fas fa-microphone"></i>';
+
+      showToast(isMuted ? 'Muted' : 'Unmuted');
+    }
+
+    // End call
+    async function endCall(goToSummary = true) {
+      // Clear intervals
+      if (statusPollInterval) clearInterval(statusPollInterval);
+      if (durationInterval) clearInterval(durationInterval);
+
+      // Close audio track
+      if (localAudioTrack) {
+        localAudioTrack.close();
+        localAudioTrack = null;
+      }
+
+      // Leave channel
+      if (client) {
+        try {
+          await client.leave();
+        } catch (e) {}
+      }
+
+      // Cancel request
+      if (channelName) {
+        try {
+          await fetch(`/api/vet-calls/cancel/${channelName}`, { method: 'POST' });
+        } catch (e) {}
+      }
+
+      if (goToSummary) {
+        window.location.href = 'summary.html';
+      }
+    }
+
+    // Cancel request
+    async function cancelRequest() {
+      if (confirm('Are you sure you want to cancel your call request?')) {
+        await endCall(true);
+      }
+    }
+
+    // Initialize
+    async function init() {
+      // Load pet info
+      loadPetInfo();
+
+      // Load config
+      const configLoaded = await loadConfig();
+      if (!configLoaded) {
+        showToast('Configuration error');
+        return;
+      }
+
+      // Initialize client
+      initClient();
+
+      // Request a vet call
+      await requestVetCall();
+    }
+
+    // Event listeners
+    muteBtn.addEventListener('click', toggleMute);
+    endBtn.addEventListener('click', () => endCall(true));
+    cancelBtn.addEventListener('click', cancelRequest);
+
+    // Start
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

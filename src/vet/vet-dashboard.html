@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vet Dashboard - VetAI Triage</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="vet.css">
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+  <style>
+    .call-card {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border-left: 4px solid var(--vet-primary);
+    }
+    .call-card.urgent {
+      border-left-color: var(--vet-danger);
+    }
+    .call-card.medium {
+      border-left-color: var(--vet-warning);
+    }
+    .call-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .call-pet-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .call-pet-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--vet-bg-light);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    .call-time {
+      font-size: 0.85rem;
+      color: var(--vet-text-muted);
+    }
+    .call-symptoms {
+      font-size: 0.9rem;
+      color: var(--vet-text-muted);
+      margin-bottom: 15px;
+    }
+    .no-calls {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--vet-text-muted);
+    }
+    .no-calls i {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      opacity: 0.3;
+    }
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+    .vet-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .vet-avatar {
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: var(--vet-primary);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .stat-number {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--vet-primary);
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--vet-text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="vet-container">
+    <!-- Header -->
+    <header class="vet-header">
+      <div class="vet-logo">
+        <i class="fas fa-paw"></i>
+        <span>VetAI Triage</span>
+      </div>
+      <p class="vet-subtitle">Veterinarian Dashboard</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="vet-card" style="padding: 25px;">
+      <!-- Dashboard Header -->
+      <div class="dashboard-header">
+        <div class="vet-info">
+          <div class="vet-avatar">
+            <i class="fas fa-user-md"></i>
+          </div>
+          <div>
+            <strong id="vet-name">Dr. Veterinarian</strong>
+            <div style="font-size: 0.85rem; color: var(--vet-text-muted);">On Duty</div>
+          </div>
+        </div>
+        <button class="vet-btn vet-btn-secondary" id="logout-btn" style="padding: 10px 20px;">
+          <i class="fas fa-sign-out-alt"></i>
+          Logout
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-number" id="pending-count">0</div>
+          <div class="stat-label">Pending Calls</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="today-count">0</div>
+          <div class="stat-label">Calls Today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="urgent-count">0</div>
+          <div class="stat-label">Urgent</div>
+        </div>
+      </div>
+
+      <!-- Pending Calls Section -->
+      <h3 style="margin-bottom: 15px; color: var(--vet-text-dark);">
+        <i class="fas fa-phone-volume" style="color: var(--vet-primary); margin-right: 10px;"></i>
+        Incoming Call Requests
+      </h3>
+
+      <div id="calls-container">
+        <div class="no-calls">
+          <i class="fas fa-phone-slash"></i>
+          <p>No pending calls at the moment.</p>
+          <p style="font-size: 0.9rem;">New call requests will appear here automatically.</p>
+        </div>
+      </div>
+
+      <!-- Refresh Info -->
+      <div style="text-align: center; margin-top: 20px; color: var(--vet-text-muted); font-size: 0.85rem;">
+        <i class="fas fa-sync-alt"></i>
+        Auto-refreshing every 3 seconds
+      </div>
+    </main>
+
+    <!-- Footer Note -->
+    <footer class="vet-footer-note">
+      <i class="fas fa-headset"></i>
+      Click "Accept Call" to connect with a pet owner via voice call.
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="vet-toast" id="toast"></div>
+
+  <script>
+    /**
+     * ===========================================
+     * HARDCODED CALL CHANNEL - EASY TO REPLACE
+     * ===========================================
+     * For simplicity, we use a fixed channel name.
+     * In production, use dynamic channels from server.
+     */
+    
+    // ===== HARDCODED CHANNEL FOR DEMO (Replace with server API later) =====
+    const FIXED_CALL_CHANNEL = "vet-human-call";
+    const VET_UID = 20001;  // Vet's user ID in the call
+    const USER_UID = 20000; // Patient's user ID in the call
+    // ======================================================================
+
+    // State
+    let vetSession = null;
+    let pollInterval = null;
+
+    // DOM Elements
+    const vetName = document.getElementById('vet-name');
+    const logoutBtn = document.getElementById('logout-btn');
+    const callsContainer = document.getElementById('calls-container');
+    const pendingCount = document.getElementById('pending-count');
+    const todayCount = document.getElementById('today-count');
+    const urgentCount = document.getElementById('urgent-count');
+    const toast = document.getElementById('toast');
+
+    // Show toast
+    function showToast(message, duration = 3000) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), duration);
+    }
+
+    // Check authentication
+    function checkAuth() {
+      const session = sessionStorage.getItem('vetai_vet_session');
+      if (!session) {
+        window.location.href = 'vet-login.html';
+        return false;
+      }
+      vetSession = JSON.parse(session);
+      vetName.textContent = vetSession.name;
+      return true;
+    }
+
+    // Logout
+    function logout() {
+      sessionStorage.removeItem('vetai_vet_session');
+      window.location.href = 'vet-login.html';
+    }
+
+    // Format time ago
+    function timeAgo(timestamp) {
+      const seconds = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000);
+      if (seconds < 60) return 'Just now';
+      if (seconds < 3600) return `${Math.floor(seconds / 60)} min ago`;
+      return `${Math.floor(seconds / 3600)} hr ago`;
+    }
+
+    // Fetch pending calls from server
+    async function fetchPendingCalls() {
+      try {
+        const res = await fetch('/api/vet-calls/pending');
+        if (res.ok) {
+          const data = await res.json();
+          // Transform API data to display format
+          return (data.calls || []).map(call => ({
+            id: call.channelName,
+            channelName: call.channelName,
+            petName: call.petInfo?.petName || 'Unknown Pet',
+            petType: call.petInfo?.petType || 'Unknown',
+            petAge: call.petInfo?.petAge || 'Unknown age',
+            petEmoji: getPetEmoji(call.petInfo?.petType),
+            urgency: call.triageSummary?.urgency || 'medium',
+            symptoms: call.triageSummary?.symptoms?.join(', ') || 'Not specified',
+            timestamp: call.requestTime,
+            waitTime: call.waitTime
+          }));
+        }
+      } catch (e) {
+        console.log('Server API not available, using mock data');
+      }
+      
+      // Return mock/demo calls if server API not available
+      return getMockCalls();
+    }
+
+    // Get pet emoji
+    function getPetEmoji(petType) {
+      const emojis = {
+        dog: '🐕', cat: '🐱', bird: '🐦', rabbit: '🐰',
+        hamster: '🐹', fish: '🐟', reptile: '🦎', other: '🐾'
+      };
+      return emojis[petType] || '🐾';
+    }
+
+    // Mock calls for demo (when server API isn't set up)
+    function getMockCalls() {
+      const storedCall = localStorage.getItem('vetai_pending_call');
+      if (storedCall) {
+        try {
+          const call = JSON.parse(storedCall);
+          return [call];
+        } catch (e) {}
+      }
+      return [];
+    }
+
+    // Render calls
+    function renderCalls(calls) {
+      // Update stats
+      pendingCount.textContent = calls.length;
+      urgentCount.textContent = calls.filter(c => c.urgency === 'high').length;
+      
+      if (calls.length === 0) {
+        callsContainer.innerHTML = `
+          <div class="no-calls">
+            <i class="fas fa-phone-slash"></i>
+            <p>No pending calls at the moment.</p>
+            <p style="font-size: 0.9rem;">New call requests will appear here automatically.</p>
+          </div>
+        `;
+        return;
+      }
+
+      callsContainer.innerHTML = calls.map(call => `
+        <div class="call-card ${call.urgency || 'medium'}">
+          <div class="call-header">
+            <div class="call-pet-info">
+              <div class="call-pet-avatar">${call.petEmoji || '🐾'}</div>
+              <div>
+                <strong>${call.petName || 'Pet'}</strong>
+                <div style="font-size: 0.85rem; color: var(--vet-text-muted);">
+                  ${call.petType || 'Unknown'} • ${call.petAge || 'Age unknown'}
+                </div>
+              </div>
+            </div>
+            <div class="call-time">
+              <i class="fas fa-clock"></i> ${timeAgo(call.timestamp)}
+            </div>
+          </div>
+          <div class="call-symptoms">
+            <strong>Symptoms:</strong> ${call.symptoms || 'No symptoms recorded'}
+          </div>
+          <div class="vet-urgency vet-urgency-${call.urgency || 'medium'}" style="margin-bottom: 15px;">
+            <i class="fas fa-exclamation-circle"></i>
+            ${call.urgency === 'high' ? 'High Priority' : call.urgency === 'low' ? 'Low Priority' : 'Medium Priority'}
+          </div>
+          <button class="vet-btn vet-btn-primary" onclick="acceptCall('${call.channelName || FIXED_CALL_CHANNEL}', '${call.id || '1'}')">
+            <i class="fas fa-phone"></i>
+            Accept Call
+          </button>
+        </div>
+      `).join('');
+    }
+
+    // Accept a call
+    async function acceptCall(channelName, callId) {
+      try {
+        // Notify server that vet accepted the call
+        await fetch(`/api/vet-calls/accept/${channelName}`, { method: 'POST' });
+      } catch (e) {
+        console.log('Could not notify server, proceeding anyway');
+      }
+      
+      // Store call info for the call page
+      sessionStorage.setItem('vetai_active_call', JSON.stringify({
+        channelName: channelName || FIXED_CALL_CHANNEL,
+        callId: callId,
+        vetUid: VET_UID,
+        userUid: USER_UID
+      }));
+      
+      // Mark call as accepted (notify server or localStorage)
+      localStorage.setItem('vetai_call_accepted', 'true');
+      localStorage.setItem('vetai_call_channel', channelName || FIXED_CALL_CHANNEL);
+      
+      // Go to call page
+      window.location.href = 'vet-call.html';
+    }
+
+    // Poll for new calls
+    async function pollCalls() {
+      const calls = await fetchPendingCalls();
+      renderCalls(calls);
+    }
+
+    // Initialize
+    function init() {
+      if (!checkAuth()) return;
+      
+      // Initial load
+      pollCalls();
+      
+      // Start polling
+      pollInterval = setInterval(pollCalls, 3000);
+      
+      // Update today count (mock)
+      todayCount.textContent = Math.floor(Math.random() * 10) + 5;
+    }
+
+    // Event listeners
+    logoutBtn.addEventListener('click', logout);
+
+    // Cleanup on leave
+    window.addEventListener('beforeunload', () => {
+      if (pollInterval) clearInterval(pollInterval);
+    });
+
+    // Start
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

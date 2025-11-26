@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session Summary - VetAI Triage</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="vet.css">
+</head>
+<body>
+  <div class="vet-container">
+    <!-- Header -->
+    <header class="vet-header">
+      <div class="vet-logo">
+        <i class="fas fa-paw"></i>
+        <span>VetAI Triage</span>
+      </div>
+      <p class="vet-subtitle">Session Summary</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="vet-card">
+      <div class="vet-summary">
+        <!-- Summary Header -->
+        <div class="vet-summary-header">
+          <div class="vet-summary-icon">
+            <i class="fas fa-clipboard-check"></i>
+          </div>
+          <h1 class="vet-card-title">Consultation Complete</h1>
+          <p class="vet-card-description">
+            Here's a summary of your consultation for <strong id="summary-pet-name">your pet</strong>
+          </p>
+        </div>
+
+        <!-- Pet Info Section -->
+        <div class="vet-summary-section">
+          <h4><i class="fas fa-paw"></i> Pet Information</h4>
+          <div class="vet-summary-content">
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <div class="vet-pet-avatar" id="summary-pet-avatar" style="width: 50px; height: 50px; font-size: 1.5rem;">🐾</div>
+              <div>
+                <strong id="summary-pet-name-full">Pet Name</strong><br>
+                <span style="color: var(--vet-text-muted);" id="summary-pet-details">Pet Type • Age</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Urgency Level -->
+        <div class="vet-summary-section">
+          <h4><i class="fas fa-exclamation-circle"></i> Assessment Urgency</h4>
+          <div class="vet-summary-content">
+            <div class="vet-urgency" id="urgency-badge">
+              <i class="fas fa-circle"></i>
+              <span id="urgency-text">Assessing...</span>
+            </div>
+            <p style="margin-top: 15px; color: var(--vet-text-muted);" id="urgency-description"></p>
+          </div>
+        </div>
+
+        <!-- Symptoms Discussed -->
+        <div class="vet-summary-section">
+          <h4><i class="fas fa-notes-medical"></i> Symptoms Discussed</h4>
+          <div class="vet-summary-content">
+            <ul class="vet-summary-list" id="symptoms-list">
+              <!-- Symptoms will be populated by JavaScript -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- AI Assessment -->
+        <div class="vet-summary-section">
+          <h4><i class="fas fa-robot"></i> AI Assessment</h4>
+          <div class="vet-summary-content">
+            <p id="assessment-text">Loading assessment...</p>
+          </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="vet-summary-section">
+          <h4><i class="fas fa-list-check"></i> Recommendations</h4>
+          <div class="vet-summary-content">
+            <ul class="vet-summary-list" id="recommendations-list">
+              <!-- Recommendations will be populated by JavaScript -->
+            </ul>
+          </div>
+        </div>
+
+        <!-- Follow-up Info -->
+        <div class="vet-summary-section" style="background: #E3F2FD; border-left: 4px solid #1976D2;">
+          <h4 style="color: #1976D2;"><i class="fas fa-calendar-check"></i> What Happens Next</h4>
+          <div class="vet-summary-content">
+            <p id="followup-text">Loading follow-up information...</p>
+          </div>
+        </div>
+
+        <!-- Session Duration -->
+        <div class="vet-summary-section">
+          <h4><i class="fas fa-clock"></i> Session Details</h4>
+          <div class="vet-summary-content">
+            <p>
+              <strong>Duration:</strong> <span id="session-duration">--</span><br>
+              <strong>Date:</strong> <span id="session-date">--</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Call a Vet Button (for medium/high urgency) -->
+        <div class="vet-summary-section" id="call-vet-section" style="background: #FFF3E0; border-left: 4px solid #FF9800; display: none;">
+          <h4 style="color: #E65100;"><i class="fas fa-phone"></i> Speak with a Veterinarian</h4>
+          <div class="vet-summary-content">
+            <p>Based on your pet's assessment, we recommend speaking with a licensed veterinarian for further evaluation.</p>
+            <button class="vet-btn vet-btn-primary" id="call-vet-btn" style="margin-top: 15px; background: #E65100;">
+              <i class="fas fa-phone-alt"></i>
+              Call a Vet Now
+            </button>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="vet-btn-group" style="margin-top: 40px;">
+          <a href="index.html" class="vet-btn vet-btn-primary" id="start-new-btn">
+            <i class="fas fa-redo"></i>
+            Start New Session
+          </a>
+          <a href="index.html" class="vet-btn vet-btn-secondary" id="exit-btn">
+            <i class="fas fa-home"></i>
+            Exit to Home
+          </a>
+        </div>
+
+        <!-- Print/Save Options -->
+        <div style="text-align: center; margin-top: 20px;">
+          <button class="vet-btn vet-btn-secondary" onclick="window.print()" style="padding: 10px 25px; font-size: 0.9rem;">
+            <i class="fas fa-print"></i>
+            Print Summary
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer Note -->
+    <footer class="vet-footer-note">
+      <i class="fas fa-exclamation-triangle"></i>
+      <strong>Important:</strong> This AI assessment is for informational purposes only. 
+      Always consult a licensed veterinarian for professional medical advice.
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="vet-toast" id="toast"></div>
+
+  <script>
+    // DOM Elements
+    const summaryPetName = document.getElementById('summary-pet-name');
+    const summaryPetAvatar = document.getElementById('summary-pet-avatar');
+    const summaryPetNameFull = document.getElementById('summary-pet-name-full');
+    const summaryPetDetails = document.getElementById('summary-pet-details');
+    const urgencyBadge = document.getElementById('urgency-badge');
+    const urgencyText = document.getElementById('urgency-text');
+    const urgencyDescription = document.getElementById('urgency-description');
+    const symptomsList = document.getElementById('symptoms-list');
+    const assessmentText = document.getElementById('assessment-text');
+    const recommendationsList = document.getElementById('recommendations-list');
+    const followupText = document.getElementById('followup-text');
+    const sessionDuration = document.getElementById('session-duration');
+    const sessionDate = document.getElementById('session-date');
+    const toast = document.getElementById('toast');
+
+    // Show toast notification
+    function showToast(message, duration = 3000) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
+    // Format duration in seconds to readable format
+    function formatDuration(seconds) {
+      if (seconds < 60) {
+        return `${seconds} seconds`;
+      }
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      if (remainingSeconds === 0) {
+        return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+      }
+      return `${minutes} min ${remainingSeconds} sec`;
+    }
+
+    // Format date to readable format
+    function formatDate(isoString) {
+      const date = new Date(isoString);
+      return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // Get urgency info
+    function getUrgencyInfo(level) {
+      const urgencyMap = {
+        low: {
+          class: 'vet-urgency-low',
+          text: 'Low Priority',
+          icon: 'fa-check-circle',
+          description: 'Based on the symptoms described, this appears to be a minor concern that can likely be monitored at home. However, if symptoms worsen or new symptoms appear, please consult a veterinarian.'
+        },
+        medium: {
+          class: 'vet-urgency-medium',
+          text: 'Medium Priority',
+          icon: 'fa-exclamation-circle',
+          description: 'The symptoms suggest that a veterinary appointment within 24-48 hours would be advisable. Monitor your pet closely and seek immediate care if the condition worsens.'
+        },
+        high: {
+          class: 'vet-urgency-high',
+          text: 'High Priority - Seek Care Now',
+          icon: 'fa-exclamation-triangle',
+          description: 'Based on the symptoms described, immediate veterinary attention is recommended. Please contact your local emergency veterinary clinic as soon as possible.'
+        }
+      };
+      return urgencyMap[level] || urgencyMap.medium;
+    }
+
+    // Populate summary page with data
+    function populateSummary() {
+      // Get session data
+      const sessionDataStr = sessionStorage.getItem('vetai_session_data');
+      const petInfoStr = sessionStorage.getItem('vetai_pet_info');
+
+      if (!sessionDataStr || !petInfoStr) {
+        showToast('No session data found');
+        // Redirect to home after delay
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 2000);
+        return;
+      }
+
+      try {
+        const sessionData = JSON.parse(sessionDataStr);
+        const petInfo = JSON.parse(petInfoStr);
+        const mockSummary = sessionData.mockSummary;
+
+        // Populate pet info
+        summaryPetName.textContent = petInfo.name || 'your pet';
+        summaryPetAvatar.textContent = petInfo.emoji || '🐾';
+        summaryPetNameFull.textContent = petInfo.name || 'Pet';
+        summaryPetDetails.textContent = `${petInfo.typeName || 'Pet'} • ${petInfo.age || 'Age not specified'}`;
+
+        // Populate urgency
+        const urgencyInfo = getUrgencyInfo(mockSummary.urgency);
+        urgencyBadge.className = `vet-urgency ${urgencyInfo.class}`;
+        urgencyBadge.innerHTML = `<i class="fas ${urgencyInfo.icon}"></i><span>${urgencyInfo.text}</span>`;
+        urgencyDescription.textContent = urgencyInfo.description;
+
+        // Populate symptoms
+        symptomsList.innerHTML = '';
+        mockSummary.symptoms.forEach(symptom => {
+          const li = document.createElement('li');
+          li.innerHTML = `<i class="fas fa-chevron-right"></i><span>${symptom}</span>`;
+          symptomsList.appendChild(li);
+        });
+
+        // Populate assessment
+        assessmentText.textContent = mockSummary.assessment;
+
+        // Populate recommendations
+        recommendationsList.innerHTML = '';
+        mockSummary.recommendations.forEach(rec => {
+          const li = document.createElement('li');
+          li.innerHTML = `<i class="fas fa-check"></i><span>${rec}</span>`;
+          recommendationsList.appendChild(li);
+        });
+
+        // Populate follow-up
+        followupText.textContent = mockSummary.followUp;
+
+        // Populate session details
+        sessionDuration.textContent = formatDuration(sessionData.duration || 0);
+        sessionDate.textContent = sessionData.endTime 
+          ? formatDate(sessionData.endTime) 
+          : formatDate(new Date().toISOString());
+
+        // Show "Call a Vet" section for medium/high urgency
+        if (mockSummary.urgency === 'medium' || mockSummary.urgency === 'high') {
+          const callVetSection = document.getElementById('call-vet-section');
+          callVetSection.style.display = 'block';
+          
+          // Store triage summary for the call
+          sessionStorage.setItem('vetai_triage_summary', JSON.stringify({
+            urgency: mockSummary.urgency,
+            recommendation: mockSummary.assessment,
+            symptoms: mockSummary.symptoms
+          }));
+        }
+
+      } catch (error) {
+        console.error('Error parsing session data:', error);
+        showToast('Error loading session data');
+      }
+    }
+
+    // Clear session and start new
+    document.getElementById('start-new-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      // Clear session data but keep pet info for convenience
+      sessionStorage.removeItem('vetai_session_data');
+      window.location.href = 'pet-form.html';
+    });
+
+    // Exit to home
+    document.getElementById('exit-btn').addEventListener('click', (e) => {
+      e.preventDefault();
+      // Clear all session data
+      sessionStorage.removeItem('vetai_session_data');
+      sessionStorage.removeItem('vetai_pet_info');
+      window.location.href = 'index.html';
+    });
+
+    // Call a Vet button
+    document.getElementById('call-vet-btn').addEventListener('click', () => {
+      window.location.href = 'call-vet.html';
+    });
+
+    // Initialize on DOM ready
+    document.addEventListener('DOMContentLoaded', populateSummary);
+  </script>
+
+  <!-- Print styles -->
+  <style>
+    @media print {
+      .vet-header,
+      .vet-footer-note,
+      .vet-btn-group,
+      button {
+        display: none !important;
+      }
+      
+      .vet-container {
+        padding: 0;
+      }
+      
+      .vet-card {
+        box-shadow: none;
+        padding: 20px;
+      }
+      
+      .vet-summary-section {
+        break-inside: avoid;
+      }
+    }
+  </style>
+</body>
+</html>

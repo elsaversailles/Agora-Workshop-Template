@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tell Us About Your Pet - VetAI Triage</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="vet.css">
+</head>
+<body>
+  <div class="vet-container">
+    <!-- Header -->
+    <header class="vet-header">
+      <div class="vet-logo">
+        <i class="fas fa-paw"></i>
+        <span>VetAI Triage</span>
+      </div>
+      <p class="vet-subtitle">Smart Pet Health Assistant</p>
+    </header>
+
+    <!-- Main Content -->
+    <main class="vet-card">
+      <div class="vet-card-header">
+        <h1 class="vet-card-title">Tell Us About Your Pet</h1>
+        <p class="vet-card-description">
+          Please provide some basic information about your pet so our AI assistant can better help you.
+        </p>
+      </div>
+
+      <form class="vet-form" id="pet-form">
+        <!-- Pet Type Selection -->
+        <div class="vet-form-group">
+          <label class="vet-form-label">
+            <i class="fas fa-heart"></i>
+            What type of pet do you have?
+          </label>
+          <div class="vet-pet-types" id="pet-types">
+            <div class="vet-pet-type" data-type="dog">
+              <div class="vet-pet-type-icon">🐕</div>
+              <div class="vet-pet-type-name">Dog</div>
+            </div>
+            <div class="vet-pet-type" data-type="cat">
+              <div class="vet-pet-type-icon">🐈</div>
+              <div class="vet-pet-type-name">Cat</div>
+            </div>
+            <div class="vet-pet-type" data-type="bird">
+              <div class="vet-pet-type-icon">🐦</div>
+              <div class="vet-pet-type-name">Bird</div>
+            </div>
+            <div class="vet-pet-type" data-type="rabbit">
+              <div class="vet-pet-type-icon">🐰</div>
+              <div class="vet-pet-type-name">Rabbit</div>
+            </div>
+            <div class="vet-pet-type" data-type="hamster">
+              <div class="vet-pet-type-icon">🐹</div>
+              <div class="vet-pet-type-name">Hamster</div>
+            </div>
+            <div class="vet-pet-type" data-type="fish">
+              <div class="vet-pet-type-icon">🐠</div>
+              <div class="vet-pet-type-name">Fish</div>
+            </div>
+            <div class="vet-pet-type" data-type="turtle">
+              <div class="vet-pet-type-icon">🐢</div>
+              <div class="vet-pet-type-name">Turtle</div>
+            </div>
+            <div class="vet-pet-type" data-type="guinea-pig">
+              <div class="vet-pet-type-icon">🐹</div>
+              <div class="vet-pet-type-name">Guinea Pig</div>
+            </div>
+            <div class="vet-pet-type" data-type="other">
+              <div class="vet-pet-type-icon">🐾</div>
+              <div class="vet-pet-type-name">Other</div>
+            </div>
+          </div>
+          <input type="hidden" id="pet-type" name="petType" required>
+        </div>
+
+        <!-- Pet Name -->
+        <div class="vet-form-group">
+          <label class="vet-form-label" for="pet-name">
+            <i class="fas fa-tag"></i>
+            What is your pet's name?
+          </label>
+          <input 
+            type="text" 
+            class="vet-form-control" 
+            id="pet-name" 
+            name="petName"
+            placeholder="Enter your pet's name"
+            required
+            autocomplete="off"
+          >
+        </div>
+
+        <!-- Optional: Pet Age -->
+        <div class="vet-form-group">
+          <label class="vet-form-label" for="pet-age">
+            <i class="fas fa-birthday-cake"></i>
+            How old is your pet? (Optional)
+          </label>
+          <input 
+            type="text" 
+            class="vet-form-control" 
+            id="pet-age" 
+            name="petAge"
+            placeholder="e.g., 3 years, 6 months"
+            autocomplete="off"
+          >
+        </div>
+
+        <!-- Submit Button -->
+        <div class="vet-btn-group" style="margin-top: 40px;">
+          <a href="index.html" class="vet-btn vet-btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Back
+          </a>
+          <button type="submit" class="vet-btn vet-btn-primary" id="submit-btn" disabled>
+            <i class="fas fa-microphone"></i>
+            Start Conversation
+          </button>
+        </div>
+      </form>
+    </main>
+
+    <!-- Footer Note -->
+    <footer class="vet-footer-note">
+      <i class="fas fa-shield-alt"></i>
+      Your pet's information is kept private and is only used to provide better assistance.
+    </footer>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="vet-toast" id="toast"></div>
+
+  <script>
+    // Pet type selection
+    const petTypes = document.querySelectorAll('.vet-pet-type');
+    const petTypeInput = document.getElementById('pet-type');
+    const petNameInput = document.getElementById('pet-name');
+    const submitBtn = document.getElementById('submit-btn');
+    const form = document.getElementById('pet-form');
+    const toast = document.getElementById('toast');
+
+    // Show toast notification
+    function showToast(message, duration = 3000) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, duration);
+    }
+
+    // Validate form
+    function validateForm() {
+      const hasType = petTypeInput.value !== '';
+      const hasName = petNameInput.value.trim() !== '';
+      submitBtn.disabled = !(hasType && hasName);
+    }
+
+    // Pet type click handler
+    petTypes.forEach(type => {
+      type.addEventListener('click', () => {
+        // Remove selected from all
+        petTypes.forEach(t => t.classList.remove('selected'));
+        // Add selected to clicked
+        type.classList.add('selected');
+        // Update hidden input
+        petTypeInput.value = type.dataset.type;
+        validateForm();
+      });
+    });
+
+    // Pet name input handler
+    petNameInput.addEventListener('input', validateForm);
+
+    // Form submit handler
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      if (!petTypeInput.value || !petNameInput.value.trim()) {
+        showToast('Please select a pet type and enter your pet\'s name');
+        return;
+      }
+
+      // Get pet emoji for the type
+      const selectedType = document.querySelector('.vet-pet-type.selected');
+      const petEmoji = selectedType ? selectedType.querySelector('.vet-pet-type-icon').textContent : '🐾';
+
+      // Store pet info in sessionStorage
+      const petInfo = {
+        type: petTypeInput.value,
+        typeName: document.querySelector('.vet-pet-type.selected .vet-pet-type-name').textContent,
+        name: petNameInput.value.trim(),
+        age: document.getElementById('pet-age').value.trim() || 'Not specified',
+        emoji: petEmoji,
+        timestamp: new Date().toISOString()
+      };
+
+      sessionStorage.setItem('vetai_pet_info', JSON.stringify(petInfo));
+
+      // Redirect to conversation page
+      window.location.href = 'conversation.html';
+    });
+
+    // Load saved pet info if exists (for back navigation)
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedInfo = sessionStorage.getItem('vetai_pet_info');
+      if (savedInfo) {
+        try {
+          const petInfo = JSON.parse(savedInfo);
+          
+          // Restore pet type
+          const typeElement = document.querySelector(`.vet-pet-type[data-type="${petInfo.type}"]`);
+          if (typeElement) {
+            typeElement.click();
+          }
+          
+          // Restore pet name
+          petNameInput.value = petInfo.name || '';
+          
+          // Restore pet age
+          if (petInfo.age && petInfo.age !== 'Not specified') {
+            document.getElementById('pet-age').value = petInfo.age;
+          }
+          
+          validateForm();
+        } catch (e) {
+          console.error('Error loading saved pet info:', e);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
