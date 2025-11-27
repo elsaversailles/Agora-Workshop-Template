@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Waiting for Vet - VetAI Triage</title>
+  <title>Waiting for Vet</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="vet.css">
   <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
@@ -14,7 +14,7 @@
     <header class="vet-header">
       <div class="vet-logo">
         <i class="fas fa-paw"></i>
-        <span>VetAI Triage</span>
+        <span>Paws <img src="image.png" style="height: 1em; vertical-align: middle;"></span>
       </div>
       <p class="vet-subtitle">Connecting with a Veterinarian</p>
     </header>
@@ -301,9 +301,13 @@
         console.log('Subscribed to vet:', user.uid, mediaType);
 
         if (mediaType === 'audio') {
-          user.audioTrack.play();
+          const remoteAudioTrack = user.audioTrack;
+          remoteAudioTrack.play();
+          remoteAudioTrack.setVolume(100);
+          console.log('Playing vet audio at volume 100');
           audioIndicator.classList.add('speaking');
           audioStatus.textContent = 'Vet is speaking...';
+          showToast('Vet audio connected');
         }
       });
 

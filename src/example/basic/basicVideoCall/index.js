@@ -113,15 +113,38 @@ $("#step-create").click(function (e) {
 $("#step-join").click(async function (e) {
   try {
     console.log("*** Join ****");
+    
+    // Ensure config is loaded before joining
+    if (!options.appid) {
+      await loadClientConfig();
+      if (!options.appid) {
+        message.error("Failed to load App ID. Please check your configuration.");
+        return;
+      }
+    }
+    
     options.channel = $("#channel").val();
     
     console.log("**** channel ***",options.channel);
     options.uid = Number($("#uid").val());
     const token = $("#token").val();
-    if (token) {
+    if (token && token !== "your_token_for_the_channel") {
       options.token = token;
     } else {
-      //options.token = await agoraGetAppData(options);
+      // Generate token from server if not provided
+      try {
+        const tokenResponse = await fetch(`/api/token?channelName=${options.channel}&uid=${options.uid || 0}&role=publisher`);
+        const tokenData = await tokenResponse.json();
+        if (tokenData.token) {
+          options.token = tokenData.token;
+          console.log("Token generated successfully");
+        } else {
+          options.token = null;
+        }
+      } catch (err) {
+        console.warn("Could not generate token, trying without token:", err);
+        options.token = null;
+      }
     }
     await join();
     // setOptionsToLocal(options);

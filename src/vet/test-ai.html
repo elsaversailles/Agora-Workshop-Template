@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Voice Test - VetAI</title>
+  <link rel="stylesheet" href="vet.css">
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+</head>
+<body>
+  <div class="vet-container">
+    <header class="vet-header">
+      <div class="vet-logo">
+        <i class="fas fa-paw" style="font-style: normal;">🐾</i>
+        <span>AI Voice Test</span>
+      </div>
+      <p class="vet-subtitle">Testing Agora Conversational AI</p>
+    </header>
+
+    <main class="vet-card" style="padding: 30px;">
+      <h2 style="text-align: center; margin-bottom: 20px;">Simple AI Voice Test</h2>
+      
+      <div id="status" style="text-align: center; padding: 20px; background: #f0f0f0; border-radius: 8px; margin-bottom: 20px;">
+        <p style="font-size: 1.2rem; font-weight: bold; color: #333;" id="status-text">Click Start to begin</p>
+      </div>
+
+      <div style="text-align: center; margin: 30px 0;">
+        <button id="start-btn" style="padding: 15px 40px; font-size: 1.2rem; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer;">
+          🎤 Start AI Conversation
+        </button>
+        <button id="stop-btn" style="padding: 15px 40px; font-size: 1.2rem; background: #dc3545; color: white; border: none; border-radius: 8px; cursor: pointer; display: none; margin-left: 10px;">
+          ⏹️ Stop
+        </button>
+      </div>
+
+      <div id="logs" style="background: #000; color: #0f0; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.9rem; max-height: 400px; overflow-y: auto;">
+        <div id="log-content">Ready...</div>
+      </div>
+
+      <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px;">
+        <strong>Instructions:</strong>
+        <ul style="margin: 10px 0; padding-left: 20px;">
+          <li>Click "Start AI Conversation"</li>
+          <li>Allow microphone access when prompted</li>
+          <li>Wait for AI to greet you</li>
+          <li>Try saying "Hello" or "Can you hear me?"</li>
+          <li>Watch the logs for debugging info</li>
+        </ul>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ===== Configuration =====
+    const TEST_CHANNEL = "test-ai-voice-" + Date.now();
+    const USER_UID = 10000;  // Changed from 0 to match working example
+    const AI_AGENT_UID = 10001;
+
+    // ===== State =====
+    let client = null;
+    let localAudioTrack = null;
+    let agentId = null;
+    let appId = null;
+    let userToken = null;
+    let aiToken = null;
+    let config = null;
+
+    // ===== DOM Elements =====
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const statusText = document.getElementById('status-text');
+    const logContent = document.getElementById('log-content');
+
+    // ===== Logging =====
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const color = {
+        info: '#0f0',
+        success: '#0ff',
+        error: '#f00',
+        warning: '#ff0'
+      }[type] || '#0f0';
+      
+      const logEntry = document.createElement('div');
+      logEntry.style.color = color;
+      logEntry.textContent = `[${timestamp}] ${message}`;
+      logContent.appendChild(logEntry);
+      logContent.parentElement.scrollTop = logContent.parentElement.scrollHeight;
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
+
+    function updateStatus(text, type = 'info') {
+      statusText.textContent = text;
+      statusText.style.color = {
+        info: '#333',
+        success: '#28a745',
+        error: '#dc3545',
+        warning: '#ffc107'
+      }[type] || '#333';
+    }
+
+    // ===== Load Config =====
+    async function loadConfig() {
+      try {
+        log('Loading configuration...');
+        const res = await fetch('/config');
+        config = await res.json();
+        appId = config.AGORA_APPID;
+        log(`App ID loaded: ${appId}`, 'success');
+        return true;
+      } catch (e) {
+        log(`Config load failed: ${e.message}`, 'error');
+        return false;
+      }
+    }
+
+    // ===== Generate Tokens =====
+    async function generateTokens() {
+      try {
+        log('Generating user token...');
+        const userRes = await fetch(`/api/token?channelName=${TEST_CHANNEL}&uid=${USER_UID}&role=publisher`);
+        const userData = await userRes.json();
+        userToken = userData.token;
+        log(`User token generated for UID ${USER_UID}`, 'success');
+
+        log('Generating AI agent token...');
+        const aiRes = await fetch(`/api/token?channelName=${TEST_CHANNEL}&uid=${AI_AGENT_UID}&role=publisher`);
+        const aiData = await aiRes.json();
+        aiToken = aiData.token;
+        log(`AI agent token generated for UID ${AI_AGENT_UID}`, 'success');
+
+        return true;
+      } catch (e) {
+        log(`Token generation failed: ${e.message}`, 'error');
+        return false;
+      }
+    }
+
+    // ===== Initialize Agora Client =====
+    function initClient() {
+      log('Initializing Agora RTC client...');
+      client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+
+      client.on('user-published', async (user, mediaType) => {
+        log(`User published: UID ${user.uid}, mediaType: ${mediaType}`, 'warning');
+        
+        try {
+          await client.subscribe(user, mediaType);
+          log(`Subscribed to UID ${user.uid}`, 'success');
+
+          if (mediaType === 'audio') {
+            const remoteAudioTrack = user.audioTrack;
+            log(`Got remote audio track from UID ${user.uid}`, 'success');
+            
+            remoteAudioTrack.play();
+            remoteAudioTrack.setVolume(100);
+            log(`Playing audio at volume 100 from UID ${user.uid}`, 'success');
+            
+            updateStatus('🔊 AI is speaking!', 'success');
+          }
+        } catch (e) {
+          log(`Subscribe error: ${e.message}`, 'error');
+        }
+      });
+
+      client.on('user-unpublished', (user, mediaType) => {
+        log(`User unpublished: UID ${user.uid}, mediaType: ${mediaType}`, 'info');
+      });
+
+      client.on('user-joined', (user) => {
+        log(`User joined: UID ${user.uid}`, 'success');
+        if (user.uid == AI_AGENT_UID) {
+          updateStatus('✅ AI Agent Connected!', 'success');
+        }
+      });
+
+      client.on('user-left', (user) => {
+        log(`User left: UID ${user.uid}`, 'warning');
+      });
+
+      log('Client initialized', 'success');
+    }
+
+    // ===== Start AI Agent =====
+    async function startAIAgent() {
+      const aiConfig = {
+        name: TEST_CHANNEL,
+        properties: {
+          channel: TEST_CHANNEL,
+          token: aiToken,
+          agent_rtc_uid: String(AI_AGENT_UID),
+          remote_rtc_uids: ["10000"],  // Changed from ["0"] to match working example
+          idle_timeout: 30,  // Changed from 120 to match working example
+          advanced_features: {
+            enable_aivad: true,
+            enable_mllm: false,
+            enable_rtm: false
+          },
+          asr: {
+            language: "en-US"
+          },
+          llm: {
+            url: "https://api.groq.com/openai/v1/chat/completions",
+            api_key: config.GROQ_KEY || "",
+            system_messages: [{
+              role: "system",
+              content: "You are a helpful AI assistant. Keep responses brief and conversational. Greet the user warmly when they join. Only output plain text responses, without any markdown, HTML tags, or emojis."
+            }],
+            greeting_message: "Hello! I'm your AI assistant. How can I help you today?",
+            failure_message: "Sorry, I'm having technical difficulties.",
+            params: {
+              model: "llama-3.3-70b-versatile"
+            }
+          },
+          tts: {
+            vendor: "minimax",
+            params: {
+              url: "wss://api.minimax.io/ws/v1/t2a_v2",
+              group_id: config.TTS_MINIMAX_GROUPID || "",
+              key: config.TTS_MINIMAX_KEY || "",
+              model: "speech-2.6-turbo",
+              voice_setting: {
+                voice_id: "English_Calm_Female_8",
+                speed: 0.95,
+                vol: 1,
+                pitch: 0,
+                emotion: "calm"
+              },
+              audio_setting: {
+                sample_rate: 16000
+              }
+            },
+            skip_patterns: [3, 4]
+          },
+          avatar: {
+            vendor: "akool",
+            enable: false,
+            params: {}
+          },
+          webhook: {
+            url: window.location.origin + "/api/convo-ai/webhook"
+          },
+          parameters: {
+            silence_config: {
+              timeout_ms: 15000,
+              action: "think",
+              content: "continue conversation"
+            }
+          }
+        }
+      };
+
+      try {
+        log('Starting AI agent...', 'info');
+        updateStatus('Starting AI agent...', 'info');
+
+        const res = await fetch('/api/convo-ai/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(aiConfig)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || `HTTP ${res.status}`);
+        }
+
+        agentId = data.agent_id;
+        log(`AI agent started! Agent ID: ${agentId}`, 'success');
+        log(`Agent status: ${data.status}`, 'success');
+        updateStatus('🤖 AI Agent Started', 'success');
+
+        // Poll agent status
+        pollAgentStatus();
+
+        return true;
+      } catch (e) {
+        log(`AI agent start failed: ${e.message}`, 'error');
+        updateStatus('❌ AI Agent Failed', 'error');
+        return false;
+      }
+    }
+
+    // ===== Poll Agent Status =====
+    let statusPollInterval = null;
+    async function pollAgentStatus() {
+      let pollCount = 0;
+      statusPollInterval = setInterval(async () => {
+        try {
+          pollCount++;
+          const res = await fetch(`/api/convo-ai/agents/${agentId}/status`);
+          const data = await res.json();
+          
+          log(`Agent status check #${pollCount}: ${data.status || 'unknown'}`, 'info');
+          
+          // Log any state changes
+          if (data.state) {
+            log(`Agent state: ${JSON.stringify(data.state)}`, 'info');
+          }
+          
+          // Stop polling after 30 checks (1 minute)
+          if (pollCount >= 30) {
+            clearInterval(statusPollInterval);
+            log('Stopped status polling', 'warning');
+          }
+        } catch (e) {
+          log(`Status poll error: ${e.message}`, 'error');
+        }
+      }, 2000);
+    }
+
+    // ===== Join Channel =====
+    async function joinChannel() {
+      try {
+        log('Joining channel...', 'info');
+        updateStatus('Joining channel...', 'info');
+
+        await client.join(appId, TEST_CHANNEL, userToken, USER_UID);
+        log(`Joined channel: ${TEST_CHANNEL} as UID ${USER_UID}`, 'success');
+
+        log('Creating microphone track...', 'info');
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        log('Microphone track created', 'success');
+
+        log('Publishing audio...', 'info');
+        await client.publish([localAudioTrack]);
+        log('Audio published successfully', 'success');
+
+        updateStatus('🎤 Connected - Speak now!', 'success');
+        return true;
+      } catch (e) {
+        log(`Join channel failed: ${e.message}`, 'error');
+        updateStatus('❌ Connection Failed', 'error');
+        return false;
+      }
+    }
+
+    // ===== Start Test =====
+    async function startTest() {
+      startBtn.disabled = true;
+      logContent.innerHTML = '';
+
+      log('=== Starting AI Voice Test ===', 'success');
+
+      // Load config
+      if (!await loadConfig()) {
+        startBtn.disabled = false;
+        return;
+      }
+
+      // Generate tokens
+      if (!await generateTokens()) {
+        startBtn.disabled = false;
+        return;
+      }
+
+      // Initialize client
+      initClient();
+
+      // Start AI agent first
+      if (!await startAIAgent()) {
+        startBtn.disabled = false;
+        return;
+      }
+
+      // Wait 2 seconds for agent to initialize
+      log('Waiting for AI agent to initialize...', 'info');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Join channel
+      if (!await joinChannel()) {
+        startBtn.disabled = false;
+        return;
+      }
+
+      stopBtn.style.display = 'inline-block';
+      log('=== Test running - try speaking! ===', 'success');
+    }
+
+    // ===== Stop Test =====
+    async function stopTest() {
+      log('=== Stopping test ===', 'warning');
+
+      // Clear status polling
+      if (statusPollInterval) {
+        clearInterval(statusPollInterval);
+        statusPollInterval = null;
+      }
+
+      if (localAudioTrack) {
+        localAudioTrack.close();
+        localAudioTrack = null;
+      }
+
+      if (client) {
+        try {
+          await client.leave();
+          log('Left channel', 'success');
+        } catch (e) {
+          log(`Leave error: ${e.message}`, 'error');
+        }
+      }
+
+      if (agentId) {
+        try {
+          await fetch(`/api/convo-ai/agents/${agentId}/leave`, { method: 'POST' });
+          log('Stopped AI agent', 'success');
+        } catch (e) {
+          log(`Stop agent error: ${e.message}`, 'error');
+        }
+      }
+
+      startBtn.disabled = false;
+      stopBtn.style.display = 'none';
+      updateStatus('Test stopped', 'info');
+      log('=== Test stopped ===', 'info');
+    }
+
+    // ===== Event Listeners =====
+    startBtn.addEventListener('click', startTest);
+    stopBtn.addEventListener('click', stopTest);
+
+    log('Page loaded and ready', 'success');
+  </script>
+</body>
+</html>

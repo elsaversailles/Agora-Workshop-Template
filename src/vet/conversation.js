@@ -6,6 +6,9 @@
 // Enable Agora SDK logging
 AgoraRTC.enableLogUpload();
 
+// UID for the user (0 means Agora will assign a random UID)
+const USER_UID = 0;
+
 // State variables
 let client = null;
 let localTracks = {
@@ -132,7 +135,6 @@ async function loadClientConfig() {
     const cfg = await res.json();
     
     agora_AppID = cfg.AGORA_APPID || null;
-    agora_Token = cfg.AGORA_TOKEN || null;
     groq_Key = cfg.GROQ_KEY || null;
     tts_Minimax_Key = cfg.TTS_MINIMAX_KEY || null;
     tts_Minimax_GroupID = cfg.TTS_MINIMAX_GROUPID || null;
@@ -140,7 +142,13 @@ async function loadClientConfig() {
     if (agora_AppID) {
       options.appid = agora_AppID;
     }
-    options.token = agora_Token || null;
+    
+    // Generate dynamic token for the channel
+    const channelName = generateChannelName();
+    const tokenRes = await fetch(`/api/token?channelName=${channelName}&uid=${USER_UID}&role=publisher`);
+    const tokenData = await tokenRes.json();
+    options.token = tokenData.token;
+    agora_Token = tokenData.token;
     
     console.log("Client config loaded successfully");
     return true;
@@ -219,7 +227,7 @@ async function joinChannel() {
     
     // Generate unique channel name
     options.channel = generateChannelName();
-    options.uid = 10000; // Local user ID
+    options.uid = 0; // Use 0 for auto-assigned UID
     
     // Join channel
     await client.join(
@@ -255,13 +263,34 @@ async function startVetConvoAI() {
     const systemPrompt = buildVetSystemPrompt();
     const greetingMessage = buildGreetingMessage();
     
+    // Generate token for AI agent (UID 10001)
+    const aiTokenRes = await fetch(`/api/token?channelName=${options.channel}&uid=10001&role=publisher`);
+    const aiTokenData = await aiTokenRes.json();
+    const aiAgentToken = aiTokenData.token;
+    
+    // Clean up any existing agent with the same channel name
+    console.log("Checking for existing AI agents...");
+    try {
+      const cleanupRes = await fetch(`/api/convo-ai/cleanup/${options.channel}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      if (cleanupRes.ok) {
+        console.log("Cleaned up existing AI agent");
+        // Wait a bit for cleanup to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    } catch (e) {
+      console.log("No existing agent to clean up");
+    }
+    
     const requestData = {
       name: options.channel,
       properties: {
         channel: options.channel,
-        token: options.token || "", // Token for AI agent to join channel (from AGORA_TOKEN in .env)
+        token: aiAgentToken, // AI agent's own token for UID 10001
         agent_rtc_uid: "10001", // AI agent user ID
-        remote_rtc_uids: ["10000"], // Subscribe to local user
+        remote_rtc_uids: ["0"], // Subscribe to user (0 = any auto-assigned UID will be detected)
         idle_timeout: 120, // 2 minutes idle timeout
         advanced_features: {
           enable_aivad: true, // Enable intelligent interruption handling
@@ -281,6 +310,8 @@ async function startVetConvoAI() {
             },
           ],
           greeting_message: greetingMessage,
+          max_idle_time: 120,
+          enable_greeting: true, // Explicitly enable automatic greeting
           failure_message: "I'm sorry, I'm having technical difficulties. Please try again or consult a veterinarian directly.",
           params: {
             model: "llama-3.3-70b-versatile"
@@ -332,6 +363,43 @@ async function startVetConvoAI() {
     
     if (!response.ok) {
       const err = await response.text();
+      
+      // If 409 conflict, try to stop the existing agent and retry
+      if (response.status === 409) {
+        console.log("Detected conflicting agent, attempting to stop it...");
+        try {
+          const errorData = JSON.parse(err);
+          if (errorData.agent_id) {
+            await fetch(`/api/convo-ai/agents/${errorData.agent_id}/leave`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" }
+            });
+            console.log("Stopped conflicting agent, retrying in 2 seconds...");
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Retry starting the agent
+            const retryResponse = await fetch("/api/convo-ai/start", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(requestData),
+            });
+            
+            if (!retryResponse.ok) {
+              const retryErr = await retryResponse.text();
+              throw new Error(retryErr || retryResponse.statusText);
+            }
+            
+            const retryData = await retryResponse.json();
+            agoraConvoTaskID = retryData.agent_id;
+            conversationStartTime = new Date();
+            console.log("Vet Convo AI started successfully after retry!", retryData);
+            return true;
+          }
+        } catch (retryError) {
+          console.error("Retry failed:", retryError);
+        }
+      }
+      
       throw new Error(err || response.statusText);
     }
     
@@ -474,8 +542,12 @@ async function handleUserPublished(user, mediaType) {
   console.log("Subscribed to user:", uid, mediaType);
   
   if (mediaType === "audio") {
-    user.audioTrack.play();
+    const audioTrack = user.audioTrack;
+    audioTrack.play();
+    audioTrack.setVolume(100);
+    console.log("Playing AI audio at volume 100 from UID:", uid);
     updateAudioIndicator('speaking');
+    showToast('AI voice connected');
   }
   
   if (mediaType === "video") {

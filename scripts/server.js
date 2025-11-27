@@ -132,6 +132,114 @@ app.post("/api/convo-ai/agents/:agentId/leave", async (req, res) => {
   }
 });
 
+// Webhook endpoint for Agora Conversational AI events
+app.post("/api/convo-ai/webhook", (req, res) => {
+  console.log("=== Convo AI Webhook Event ===");
+  console.log("Headers:", JSON.stringify(req.headers, null, 2));
+  console.log("Body:", JSON.stringify(req.body, null, 2));
+  
+  // Acknowledge receipt
+  res.status(200).json({ received: true });
+});
+
+// Get agent status
+app.get("/api/convo-ai/agents/:agentId/status", async (req, res) => {
+  try {
+    const agentId = req.params.agentId;
+    const appid = process.env.AGORA_APPID;
+    const apiKey = process.env.AGORA_REST_KEY;
+    const apiSecret = process.env.AGORA_REST_SECRET;
+    
+    if (!appid || !apiKey || !apiSecret) {
+      return res.status(500).json({ 
+        error: "Server misconfigured: missing Agora credentials" 
+      });
+    }
+
+    const url = `https://api.agora.io/api/conversational-ai-agent/v2/projects/${appid}/agents/${agentId}`;
+    const basicAuth = Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
+
+    const response = await axios.get(url, {
+      headers: {
+        "Authorization": `Basic ${basicAuth}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    console.log("Agent Status:", JSON.stringify(response.data, null, 2));
+    return res.json(response.data);
+
+  } catch (err) {
+    console.error("Get Agent Status Error:", err.response?.data || err.message);
+    
+    if (err.response) {
+      return res.status(err.response.status).json(err.response.data);
+    }
+    return res.status(500).json({ error: String(err.message) });
+  }
+});
+
+// Proxy: cleanup stale AI agents for a channel
+app.post("/api/convo-ai/cleanup/:channelName", async (req, res) => {
+  try {
+    const channelName = req.params.channelName;
+    const appid = process.env.AGORA_APPID;
+    const apiKey = process.env.AGORA_REST_KEY;
+    const apiSecret = process.env.AGORA_REST_SECRET;
+    
+    if (!appid || !apiKey || !apiSecret) {
+      return res.status(500).json({ 
+        error: "Server misconfigured: missing Agora credentials" 
+      });
+    }
+
+    // List all agents and find the one for this channel
+    const listUrl = `https://api.agora.io/api/conversational-ai-agent/v2/projects/${appid}/agents`;
+    const basicAuth = Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
+
+    console.log("=== Cleaning up stale agents for channel:", channelName, "===");
+
+    try {
+      const listResponse = await axios.get(listUrl, {
+        headers: {
+          "Authorization": `Basic ${basicAuth}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      const agents = listResponse.data.agents || [];
+      const staleAgent = agents.find(a => a.channel === channelName);
+
+      if (staleAgent) {
+        console.log("Found stale agent:", staleAgent.agent_id);
+        const stopUrl = `https://api.agora.io/api/conversational-ai-agent/v2/projects/${appid}/agents/${staleAgent.agent_id}/leave`;
+        
+        await axios.post(stopUrl, {}, {
+          headers: {
+            "Authorization": `Basic ${basicAuth}`,
+            "Content-Type": "application/json"
+          }
+        });
+        
+        console.log("Stale agent stopped successfully");
+        return res.json({ cleaned: true, agent_id: staleAgent.agent_id });
+      } else {
+        console.log("No stale agent found");
+        return res.json({ cleaned: false });
+      }
+    } catch (err) {
+      // If listing fails, just return success (no agent to clean)
+      console.log("No agents to clean up");
+      return res.json({ cleaned: false });
+    }
+
+  } catch (err) {
+    console.error("Cleanup Error:", err.response?.data || err.message);
+    // Return success even on error - cleanup is best-effort
+    return res.json({ cleaned: false, error: err.message });
+  }
+});
+
 // ===========================================
 // TOKEN GENERATION API
 // ===========================================

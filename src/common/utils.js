@@ -229,9 +229,9 @@ function setOptionsToLocal(option) {
   localStorage.setItem("__options", JSON.stringify(option));
 }
 
-//function getOptionsFromLocal() {
-//  return JSON.parse(localStorage.getItem("__options")) || {};
-//}
+function getOptionsFromLocal() {
+  return JSON.parse(localStorage.getItem("__options")) || {};
+}
 
 function getLanguage() {
   const DEFAULT_LANGUAGE = "en";
