@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paws+ Waiting Room</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="vet.css">
+</head>
+<body>
+  <div class="vet-container">
+    <header class="vet-header">
+      <div class="vet-logo">
+        <i class="fas fa-paw"></i>
+        <span>Paws+</span>
+      </div>
+      <p class="vet-subtitle">Waiting for vet confirmation</p>
+    </header>
+
+    <main class="vet-card" style="padding: 28px;">
+      <div style="text-align: center; margin-bottom: 20px; display: grid; gap: 10px;">
+        <div style="width: 86px; height: 86px; border-radius: 20px; background: #e0f2fe; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+          <i class="fas fa-phone-volume fa-2x" style="color: var(--vet-primary);"></i>
+        </div>
+        <h2 style="margin: 0;">Waiting Room</h2>
+        <p style="color: var(--vet-text-muted);" id="booking-status-text">We sent your request to the vet. AI triage will start after acceptance. When done, we’ll connect you to the vet.</p>
+      </div>
+
+      <div class="vet-summary-section" style="margin-top: 10px;">
+        <h4><i class="fas fa-user-md"></i> Booking details</h4>
+        <p><strong>Vet:</strong> <span id="wait-vet"></span></p>
+        <p><strong>Date:</strong> <span id="wait-date"></span></p>
+        <p><strong>Time:</strong> <span id="wait-time"></span></p>
+        <p><strong>Notes:</strong> <span id="wait-notes"></span></p>
+      </div>
+
+      <div class="vet-summary-section" style="margin-top: 10px;">
+        <h4><i class="fas fa-paw"></i> Pet info</h4>
+        <p><strong>Name:</strong> <span id="wait-pet-name"></span></p>
+        <p><strong>Type:</strong> <span id="wait-pet-type"></span></p>
+        <p><strong>Age:</strong> <span id="wait-pet-age"></span></p>
+      </div>
+
+      <div class="vet-summary-section" id="wait-triage" style="margin-top: 10px; display: none;">
+        <h4><i class="fas fa-clipboard-check"></i> Vet Summary Notes</h4>
+        <ul id="wait-triage-points" style="padding-left: 18px; margin: 8px 0;"></ul>
+      </div>
+
+      <div class="vet-summary-section" id="wait-transcript" style="margin-top: 10px; display: none;">
+        <h4><i class="fas fa-comments"></i> Call Transcription</h4>
+        <ul id="wait-transcript-list" style="padding-left: 18px; margin: 8px 0;"></ul>
+      </div>
+
+      <div class="vet-btn-group" style="margin-top: 18px;">
+        <button class="vet-btn vet-btn-secondary" id="wait-cancel"><i class="fas fa-times"></i> Cancel</button>
+        <button class="vet-btn vet-btn-primary" id="wait-refresh"><i class="fas fa-sync"></i> Refresh status</button>
+      </div>
+    </main>
+
+    <footer class="vet-footer-note">
+      <i class="fas fa-info-circle"></i>
+      We’ll automatically move you to AI triage when the vet accepts.
+    </footer>
+  </div>
+
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const bookingId = params.get('bookingId') || sessionStorage.getItem('vetai_active_booking');
+      const waitVet = document.getElementById('wait-vet');
+      const waitDate = document.getElementById('wait-date');
+      const waitTime = document.getElementById('wait-time');
+      const waitNotes = document.getElementById('wait-notes');
+      const waitPetName = document.getElementById('wait-pet-name');
+      const waitPetType = document.getElementById('wait-pet-type');
+      const waitPetAge = document.getElementById('wait-pet-age');
+      const statusText = document.getElementById('booking-status-text');
+      const cancelBtn = document.getElementById('wait-cancel');
+      const refreshBtn = document.getElementById('wait-refresh');
+      const triageSection = document.getElementById('wait-triage');
+      const triagePoints = document.getElementById('wait-triage-points');
+      const transcriptSection = document.getElementById('wait-transcript');
+      const transcriptList = document.getElementById('wait-transcript-list');
+
+      function loadBookings() {
+        try {
+          return JSON.parse(localStorage.getItem('vetai_bookings')) || [];
+        } catch (e) { return []; }
+      }
+
+      function loadPet() {
+        try {
+          return JSON.parse(sessionStorage.getItem('vetai_pet_info')) || null;
+        } catch (e) { return null; }
+      }
+
+      function renderBooking() {
+        const bookings = loadBookings();
+        const booking = bookings.find(b => b.id === bookingId);
+        if (!booking) {
+          statusText.textContent = 'Booking not found. Please rebook.';
+          return null;
+        }
+        waitVet.textContent = booking.vetName || 'Vet';
+        waitDate.textContent = booking.date || '-';
+        waitTime.textContent = booking.time || '-';
+        waitNotes.textContent = booking.notes || 'None';
+        const pet = loadPet();
+        waitPetName.textContent = pet?.name || 'Unknown';
+        waitPetType.textContent = pet?.typeName || pet?.type || 'Unknown';
+        waitPetAge.textContent = pet?.age || 'Not specified';
+        if (booking.triageSummary && booking.triageSummary.length) {
+          triageSection.style.display = 'block';
+          triagePoints.innerHTML = booking.triageSummary.map(t => `<li>${t}</li>`).join('');
+        }
+        if (booking.transcript && booking.transcript.length) {
+          transcriptSection.style.display = 'block';
+          transcriptList.innerHTML = booking.transcript.map(t => `<li>${t}</li>`).join('');
+        }
+        return booking;
+      }
+
+      function checkStatus() {
+        const booking = renderBooking();
+        if (!booking) return;
+        if (booking.status === 'accepted') {
+          statusText.textContent = 'Vet accepted. Waiting to start the call.';
+        } else if (booking.status === 'triaged') {
+          statusText.textContent = 'AI triage complete. Waiting for vet to start the call.';
+        } else if (booking.status === 'calling') {
+          sessionStorage.setItem('vetai_active_booking', booking.id);
+          sessionStorage.setItem('vetai_call_channel', booking.id);
+          window.location.href = `call-vet.html?bookingId=${booking.id}`;
+        } else if (booking.status === 'awaiting-summary') {
+          statusText.textContent = 'Consultation ended. Vet is preparing your notes.';
+        } else if (booking.status === 'summary-ready') {
+          statusText.textContent = 'Consultation summary received.';
+          if (booking.consultSummary) {
+            triageSection.style.display = 'block';
+            triagePoints.innerHTML = booking.consultSummary.split('\n').map(t => `<li>${t}</li>`).join('');
+          }
+          if (booking.transcript && booking.transcript.length) {
+            transcriptSection.style.display = 'block';
+            transcriptList.innerHTML = booking.transcript.map(t => `<li>${t}</li>`).join('');
+          }
+        } else if (booking.status === 'declined') {
+          statusText.textContent = 'The vet declined this booking. Please choose another vet or time.';
+        } else {
+          statusText.textContent = 'Waiting for vet to accept. We’ll start AI triage once approved.';
+        }
+      }
+
+      let interval = null;
+      function startPolling() {
+        interval = setInterval(checkStatus, 3000);
+      }
+
+      cancelBtn.addEventListener('click', () => {
+        const bookings = loadBookings().filter(b => b.id !== bookingId);
+        localStorage.setItem('vetai_bookings', JSON.stringify(bookings));
+        sessionStorage.removeItem('vetai_active_booking');
+        window.location.href = 'index.html';
+      });
+
+      refreshBtn.addEventListener('click', checkStatus);
+
+      renderBooking();
+      checkStatus();
+      startPolling();
+    })();
+  </script>
+</body>
+</html>

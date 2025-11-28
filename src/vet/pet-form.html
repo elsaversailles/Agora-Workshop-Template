@@ -198,8 +198,32 @@
 
       sessionStorage.setItem('vetai_pet_info', JSON.stringify(petInfo));
 
-      // Redirect to conversation page
-      window.location.href = 'conversation.html';
+      // Attach pet info to booking if present
+      const params = new URLSearchParams(window.location.search);
+      const bookingId = params.get('bookingId') || sessionStorage.getItem('vetai_active_booking');
+      if (bookingId) {
+        try {
+          const bookings = JSON.parse(localStorage.getItem('vetai_bookings')) || [];
+          const idx = bookings.findIndex(b => b.id === bookingId);
+          if (idx >= 0) {
+            bookings[idx].petInfo = petInfo;
+            localStorage.setItem('vetai_bookings', JSON.stringify(bookings));
+          }
+        } catch (e) {
+          console.error('Could not update booking with pet info', e);
+        }
+      }
+
+      // If booking accepted, go to conversation; otherwise wait room
+      const bookingsList = (() => {
+        try { return JSON.parse(localStorage.getItem('vetai_bookings')) || []; } catch (e) { return []; }
+      })();
+      const booking = bookingsList.find(b => b.id === bookingId);
+      if (booking && booking.status === 'accepted') {
+        window.location.href = `conversation.html?bookingId=${booking.id}`;
+      } else {
+        window.location.href = `waiting-room.html?bookingId=${bookingId || ''}`;
+      }
     });
 
     // Load saved pet info if exists (for back navigation)

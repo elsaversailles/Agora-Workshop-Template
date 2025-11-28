@@ -714,76 +714,54 @@ function generateMockSummary() {
  * Initialize the conversation
  */
 async function initConversation() {
-  // Check for pet info
-  const savedPetInfo = sessionStorage.getItem('vetai_pet_info');
-  if (!savedPetInfo) {
-    showToast("Please provide pet information first");
-    window.location.href = 'pet-form.html';
-    return;
-  }
-  
+  // Build pet info from booking/session; do not redirect
   try {
-    petInfo = JSON.parse(savedPetInfo);
-    
-    // Update pet info display
-    petAvatar.textContent = petInfo.emoji || '🐾';
-    petNameDisplay.textContent = petInfo.name || 'Your Pet';
-    petTypeDisplay.textContent = `${petInfo.typeName || 'Pet'} • ${petInfo.age || 'Age not specified'}`;
+    const bookingId = sessionStorage.getItem('vetai_active_booking');
+    const bookings = JSON.parse(localStorage.getItem('vetai_bookings') || '[]');
+    const booking = bookings.find(b => b.id === bookingId);
+    const storedPet = sessionStorage.getItem('vetai_pet_info');
+    petInfo = booking?.petInfo || (storedPet ? JSON.parse(storedPet) : null) || { emoji: '🐾', name: 'Your Pet', typeName: 'Pet', age: 'Age not specified' };
   } catch (e) {
-    console.error("Error parsing pet info:", e);
-    window.location.href = 'pet-form.html';
-    return;
+    petInfo = { emoji: '🐾', name: 'Your Pet', typeName: 'Pet', age: 'Age not specified' };
   }
-  
+  petAvatar.textContent = petInfo.emoji || '🐾';
+  petNameDisplay.textContent = petInfo.name || 'Your Pet';
+  petTypeDisplay.textContent = `${petInfo.typeName || petInfo.type || 'Pet'} • ${petInfo.age || 'Age not specified'}`;
+
   showLoading('Connecting to AI assistant...');
   updateStatus('connecting', 'Connecting...');
-  
+
   try {
-    // Load configuration
     const configLoaded = await loadClientConfig();
-    if (!configLoaded) {
-      throw new Error("Failed to load configuration");
-    }
-    
-    // Create client
+    if (!configLoaded) throw new Error("Failed to load configuration");
+
     createClient();
-    
-    // Join channel
+
     loadingText.textContent = 'Joining session...';
     const joined = await joinChannel();
-    if (!joined) {
-      throw new Error("Failed to join channel");
-    }
-    
-    // Create and publish audio/video tracks
+    if (!joined) throw new Error("Failed to join channel");
+
     loadingText.textContent = 'Setting up camera and microphone...';
     const published = await createTracksAndPublish();
-    if (!published) {
-      throw new Error("Failed to publish tracks");
-    }
-    
-    // Start Convo AI
+    if (!published) throw new Error("Failed to publish tracks");
+
     loadingText.textContent = 'Starting AI assistant...';
     const aiStarted = await startVetConvoAI();
-    if (!aiStarted) {
-      throw new Error("Failed to start AI assistant");
-    }
-    
-    // Success!
+    if (!aiStarted) throw new Error("Failed to start AI assistant");
+
     hideLoading();
     updateStatus('active', 'Connected');
     updateAudioIndicator('listening');
     showToast('Connected! Start speaking to the AI assistant.');
-    
+
   } catch (error) {
     console.error("Initialization error:", error);
     hideLoading();
     updateStatus('ended', 'Connection Failed');
     showToast("Failed to connect. Please try again.");
-    
-    // Offer retry option
+
     setTimeout(() => {
-      if (confirm("Connection failed. Would you like to try again?")) {
+      if (confirm("Connection failed. Retry?")) {
         window.location.reload();
       } else {
         window.location.href = 'index.html';

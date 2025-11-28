@@ -14,9 +14,9 @@
     <header class="vet-header">
       <div class="vet-logo">
         <i class="fas fa-paw"></i>
-        <span>VetAI Triage</span>
+        <span>Paws+</span>
       </div>
-      <p class="vet-subtitle">Voice Call with Patient</p>
+      <p class="vet-subtitle">Video Call with Patient</p>
     </header>
 
     <!-- Main Content -->
@@ -47,10 +47,32 @@
           <p id="call-duration" style="font-size: 2rem; font-weight: bold; color: var(--vet-primary); margin-top: 20px;">00:00</p>
         </div>
 
+        <!-- Video Container -->
+        <div class="vet-video-container" style="margin-top: 20px;">
+          <!-- Remote Video -->
+          <div id="remote-playerlist" class="vet-remote-video">
+            <div class="vet-video-placeholder" id="video-placeholder">
+              <div class="vet-audio-indicator inactive">
+                <i class="fas fa-user-md"></i>
+              </div>
+              <p class="vet-audio-status">Waiting for patient video...</p>
+              <p class="vet-audio-hint">You will see the patient's video once they join.</p>
+            </div>
+          </div>
+
+          <!-- Local Video -->
+          <div id="local-player" class="vet-local-video">
+            <div class="vet-local-player-name">You</div>
+          </div>
+        </div>
+
         <!-- Controls -->
         <div class="vet-controls">
           <button class="vet-control-btn vet-control-btn-mute" id="mute-btn" title="Mute/Unmute" disabled>
             <i class="fas fa-microphone"></i>
+          </button>
+          <button class="vet-control-btn vet-control-btn-video" id="video-btn" title="Camera On/Off" disabled>
+            <i class="fas fa-video"></i>
           </button>
           <button class="vet-control-btn vet-control-btn-end" id="end-btn" title="End Call">
             <i class="fas fa-phone-slash"></i>
@@ -84,7 +106,9 @@
     // Agora state
     let client = null;
     let localAudioTrack = null;
+    let localVideoTrack = null;
     let isMuted = false;
+    let isVideoEnabled = true;
     let callStartTime = null;
     let durationInterval = null;
 
@@ -94,6 +118,8 @@
     let channelName = FIXED_CALL_CHANNEL;
 
     // DOM Elements
+    const remotePlayerList = document.getElementById('remote-playerlist');
+    const videoPlaceholder = document.getElementById('video-placeholder');
     const callerAvatar = document.getElementById('caller-avatar');
     const callerName = document.getElementById('caller-name');
     const callerDetails = document.getElementById('caller-details');
@@ -103,6 +129,7 @@
     const audioHint = document.getElementById('audio-hint');
     const callDuration = document.getElementById('call-duration');
     const muteBtn = document.getElementById('mute-btn');
+    const videoBtn = document.getElementById('video-btn');
     const endBtn = document.getElementById('end-btn');
     const toast = document.getElementById('toast');
 
@@ -171,6 +198,21 @@
           user.audioTrack.play();
           audioIndicator.classList.add('speaking');
           audioStatus.textContent = 'Patient is speaking...';
+        } else if (mediaType === 'video') {
+          const playerId = `player-${user.uid}`;
+          if (!document.getElementById(playerId)) {
+            const wrapper = document.createElement('div');
+            wrapper.id = playerId;
+            wrapper.className = 'remote-player-wrapper';
+            wrapper.innerHTML = `
+              <div class="remote-player" id="player-container-${user.uid}"></div>
+              <div class="remote-player-name">Patient</div>
+            `;
+            remotePlayerList.appendChild(wrapper);
+          }
+
+          user.videoTrack.play(`player-container-${user.uid}`);
+          videoPlaceholder.style.display = 'none';
         }
       });
 
@@ -179,6 +221,15 @@
         if (mediaType === 'audio') {
           audioIndicator.classList.remove('speaking');
           audioStatus.textContent = 'In call';
+        } else if (mediaType === 'video') {
+          const playerId = `player-${user.uid}`;
+          const el = document.getElementById(playerId);
+          if (el) {
+            el.remove();
+          }
+          if (!remotePlayerList.querySelector('.remote-player-wrapper')) {
+            videoPlaceholder.style.display = 'flex';
+          }
         }
       });
 
@@ -204,16 +255,25 @@
         await client.join(appId, channelName, token, VET_UID);
         console.log('Joined channel:', channelName, 'as UID:', VET_UID);
 
-        // Create and publish audio track
-        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        await client.publish([localAudioTrack]);
-        console.log('Published audio track');
+        // Create and publish audio/video tracks
+        const [audioTrack, videoTrack] = await Promise.all([
+          AgoraRTC.createMicrophoneAudioTrack(),
+          AgoraRTC.createCameraVideoTrack()
+        ]);
+        localAudioTrack = audioTrack;
+        localVideoTrack = videoTrack;
+
+        localVideoTrack.play('local-player', { mirror: true });
+
+        await client.publish([localAudioTrack, localVideoTrack]);
+        console.log('Published audio and video tracks');
 
         // Update UI
         updateStatus('active', 'Connected');
         audioStatus.textContent = 'Waiting for patient to connect...';
         audioHint.textContent = 'Speak clearly when the patient joins.';
         muteBtn.disabled = false;
+        videoBtn.disabled = false;
 
         // Start duration timer
         callStartTime = Date.now();
@@ -245,6 +305,20 @@
       showToast(isMuted ? 'Muted' : 'Unmuted');
     }
 
+    // Toggle video
+    function toggleVideo() {
+      if (!localVideoTrack) return;
+      isVideoEnabled = !isVideoEnabled;
+      localVideoTrack.setEnabled(isVideoEnabled);
+
+      videoBtn.classList.toggle('disabled', !isVideoEnabled);
+      videoBtn.innerHTML = isVideoEnabled
+        ? '<i class="fas fa-video"></i>'
+        : '<i class="fas fa-video-slash"></i>';
+
+      showToast(isVideoEnabled ? 'Camera On' : 'Camera Off');
+    }
+
     // End call
     async function endCall() {
       // Stop timer
@@ -252,10 +326,15 @@
         clearInterval(durationInterval);
       }
 
-      // Close audio track
+      // Close local tracks
       if (localAudioTrack) {
         localAudioTrack.close();
         localAudioTrack = null;
+      }
+      if (localVideoTrack) {
+        localVideoTrack.stop();
+        localVideoTrack.close();
+        localVideoTrack = null;
       }
 
       // Leave channel
@@ -263,11 +342,18 @@
         await client.leave();
       }
 
-      // Clear call accepted flag
-      localStorage.removeItem('vetai_call_accepted');
-      localStorage.removeItem('vetai_call_channel');
-
-      // Go back to dashboard
+      // Mark booking awaiting summary and go to summary edit
+      const bookingId = sessionStorage.getItem('vetai_active_booking');
+      if (bookingId) {
+        const bookings = (() => { try { return JSON.parse(localStorage.getItem('vetai_bookings')) || []; } catch (e) { return []; }})();
+        const idx = bookings.findIndex(b => b.id === bookingId);
+        if (idx >= 0) {
+          bookings[idx].status = 'awaiting-summary';
+          localStorage.setItem('vetai_bookings', JSON.stringify(bookings));
+          window.location.href = `vet-summary-edit.html?bookingId=${bookingId}`;
+          return;
+        }
+      }
       window.location.href = 'vet-dashboard.html';
     }
 
@@ -309,6 +395,7 @@
 
     // Event listeners
     muteBtn.addEventListener('click', toggleMute);
+    videoBtn.addEventListener('click', toggleVideo);
     endBtn.addEventListener('click', () => {
       if (confirm('Are you sure you want to end this call?')) {
         endCall();

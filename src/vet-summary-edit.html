@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paws+ - Finalize Consultation Summary</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="vet/vet.css">
+</head>
+<body>
+  <div class="vet-container">
+    <header class="vet-header">
+      <div class="vet-logo">
+        <i class="fas fa-paw"></i>
+        <span>Paws+</span>
+      </div>
+      <p class="vet-subtitle">Edit and send consultation summary</p>
+    </header>
+
+    <main class="vet-card" style="padding: 24px;">
+      <section class="vet-card-header" style="margin-bottom: 10px;">
+        <h2 class="vet-card-title">Consultation Summary</h2>
+        <p class="vet-card-description">Review, edit, and send to the pet owner.</p>
+      </section>
+
+      <div class="vet-summary-section">
+        <h4><i class="fas fa-paw"></i> Pet</h4>
+        <p><strong id="pet-name">Pet</strong> — <span id="pet-type">Type</span></p>
+      </div>
+
+      <div class="vet-form-group" style="margin-top: 16px;">
+        <label class="vet-form-label" for="summary-text"><i class="fas fa-pen"></i> Notes / Next steps</label>
+        <textarea class="vet-form-control" id="summary-text" rows="10" placeholder="Enter consultation notes and next steps"></textarea>
+      </div>
+
+      <div class="vet-summary-section" id="triage-ref" style="margin-top: 16px; display: none;">
+        <h4><i class="fas fa-robot"></i> AI Triage (reference)</h4>
+        <ul id="triage-list" style="padding-left: 18px; margin: 8px 0;"></ul>
+      </div>
+
+      <div class="vet-btn-group" style="margin-top: 16px;">
+        <button class="vet-btn vet-btn-secondary" id="cancel-btn"><i class="fas fa-arrow-left"></i> Cancel</button>
+        <button class="vet-btn vet-btn-primary" id="send-btn"><i class="fas fa-paper-plane"></i> Send to Pet Owner</button>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const bookingId = params.get('bookingId') || sessionStorage.getItem('vetai_active_booking');
+      const summaryInput = document.getElementById('summary-text');
+      const petNameEl = document.getElementById('pet-name');
+      const petTypeEl = document.getElementById('pet-type');
+      const triageRef = document.getElementById('triage-ref');
+      const triageList = document.getElementById('triage-list');
+      const sendBtn = document.getElementById('send-btn');
+      const cancelBtn = document.getElementById('cancel-btn');
+
+      function loadBooking() {
+        if (!bookingId) return null;
+        try {
+          const bookings = JSON.parse(localStorage.getItem('vetai_bookings')) || [];
+          return bookings.find(b => b.id === bookingId) || null;
+        } catch (e) { return null; }
+      }
+
+      function saveBookingSummary(text) {
+        try {
+          const bookings = JSON.parse(localStorage.getItem('vetai_bookings')) || [];
+          const idx = bookings.findIndex(b => b.id === bookingId);
+          if (idx >= 0) {
+            bookings[idx].consultSummary = text;
+            bookings[idx].status = 'summary-ready';
+            localStorage.setItem('vetai_bookings', JSON.stringify(bookings));
+          }
+        } catch (e) {}
+      }
+
+      const booking = loadBooking();
+      if (!booking) {
+        window.location.href = 'vet/vet-dashboard.html';
+        return;
+      }
+
+      petNameEl.textContent = booking.petInfo?.name || 'Pet';
+      petTypeEl.textContent = booking.petInfo?.typeName || booking.petInfo?.type || 'Unknown';
+      summaryInput.value = booking.consultSummary || '';
+      if (booking.triageSummary && booking.triageSummary.length) {
+        triageRef.style.display = 'block';
+        triageList.innerHTML = booking.triageSummary.map(t => `<li>${t}</li>`).join('');
+      }
+
+      sendBtn.addEventListener('click', () => {
+        saveBookingSummary(summaryInput.value.trim());
+        window.location.href = 'vet/vet-dashboard.html';
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        window.location.href = 'vet/vet-dashboard.html';
+      });
+    })();
+  </script>
+</body>
+</html>

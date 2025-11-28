@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paws+ - Book a Vet</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="vet.css">
+</head>
+<body>
+  <div class="vet-container">
+    <header class="vet-header" style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="vet-logo">
+        <i class="fas fa-paw"></i>
+        <span>Paws+</span>
+      </div>
+      <a href="conversation.html" class="vet-btn vet-btn-secondary" style="padding: 8px 16px; font-size: 0.9rem;">
+        <i class="fas fa-robot"></i>
+        Restart AI Triage
+      </a>
+    </header>
+    <p class="vet-subtitle" style="text-align: center; margin-top: 0;">Choose a vet after completing AI triage.</p>
+
+    <main class="vet-card">
+      <section class="vet-card-header" style="margin-bottom: 10px;">
+        <h2 class="vet-card-title">Available Vets</h2>
+        <p class="vet-card-description">Pick a vet with an open slot. Your triage summary will be sent automatically.</p>
+      </section>
+
+      <section class="vet-features" style="margin-top: 0;">
+        <div class="vet-feature" style="text-align: left;">
+          <img src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80&q=80&sat=-15" alt="Dr. Aria Chen" class="vet-avatar-circle">
+          <div class="vet-feature-icon" style="margin: 0;">
+            <i class="fas fa-user-md"></i>
+          </div>
+          <h3 class="vet-feature-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Dr. Aria Chen</span>
+            <span class="vet-status vet-status-active" style="font-size: 0.8rem;">Available now</span>
+          </h3>
+          <p class="vet-feature-text">Dermatology &amp; otology • Allergies, infections</p>
+          <div class="vet-booking-actions">
+            <button class="vet-btn vet-btn-primary booking-trigger" data-vet="aria-chen" data-vetname="Dr. Aria Chen" data-availability="now" data-type="now" data-slots="now,09:30,11:00,14:00,16:30" type="button">Book now</button>
+            <button class="vet-btn vet-btn-secondary booking-trigger" data-vet="aria-chen" data-vetname="Dr. Aria Chen" data-availability="later" data-type="later" data-slots="10:30,12:30,18:00" type="button">Schedule later</button>
+          </div>
+        </div>
+
+        <div class="vet-feature" style="text-align: left;">
+          <img src="https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=600&q=80&sat=-10" alt="Dr. Mateo Alvarez" class="vet-avatar-circle">
+          <div class="vet-feature-icon" style="margin: 0;">
+            <i class="fas fa-user-md"></i>
+          </div>
+          <h3 class="vet-feature-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Dr. Mateo Alvarez</span>
+          </h3>
+          <p class="vet-feature-text">Respiratory &amp; cardiology • Cough, asthma, murmurs</p>
+          <div class="vet-booking-actions">
+            <button class="vet-btn vet-btn-primary booking-trigger" data-vet="mateo-alvarez" data-vetname="Dr. Mateo Alvarez" data-availability="later" data-type="later" data-slots="09:00,11:30,15:00,19:00" type="button">Schedule time</button>
+          </div>
+        </div>
+
+        <div class="vet-feature" style="text-align: left;">
+          <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=600&q=80&sat=-10" alt="Dr. Priya Nair" class="vet-avatar-circle">
+          <div class="vet-feature-icon" style="margin: 0;">
+            <i class="fas fa-user-md"></i>
+          </div>
+          <h3 class="vet-feature-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Dr. Priya Nair</span>
+            <span class="vet-status vet-status-active" style="font-size: 0.8rem;">Available now</span>
+          </h3>
+          <p class="vet-feature-text">Internal medicine (GI/liver) • Vomiting, diarrhea, pancreatitis</p>
+          <div class="vet-booking-actions">
+            <button class="vet-btn vet-btn-primary booking-trigger" data-vet="priya-nair" data-vetname="Dr. Priya Nair" data-availability="now" data-type="now" data-slots="now,10:00,13:00,17:00" type="button">Book now</button>
+            <button class="vet-btn vet-btn-secondary booking-trigger" data-vet="priya-nair" data-vetname="Dr. Priya Nair" data-availability="later" data-type="later" data-slots="11:30,15:30,20:00" type="button">Schedule later</button>
+          </div>
+        </div>
+
+        <div class="vet-feature" style="text-align: left;">
+          <img src="https://images.unsplash.com/photo-1527613426441-4da17471b66d?auto=format&fit=crop&w=600&q=80&sat=-10" alt="Dr. Leo Martinez" class="vet-avatar-circle">
+          <div class="vet-feature-icon" style="margin: 0;">
+            <i class="fas fa-user-md"></i>
+          </div>
+          <h3 class="vet-feature-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Dr. Leo Martinez</span>
+          </h3>
+          <p class="vet-feature-text">Orthopedics &amp; rehab • Limping, sprains, post-op care</p>
+          <div class="vet-booking-actions">
+            <button class="vet-btn vet-btn-primary booking-trigger" data-vet="leo-martinez" data-vetname="Dr. Leo Martinez" data-availability="later" data-type="later" data-slots="10:30,12:30,18:00" type="button">Schedule time</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Booking Modal -->
+  <div id="booking-modal" class="vet-modal" style="display: none;">
+    <div class="vet-modal-backdrop"></div>
+    <div class="vet-modal-card">
+      <div class="vet-modal-header">
+        <div>
+          <p class="vet-modal-eyebrow">Paws+ Booking</p>
+          <h3 class="vet-modal-title" id="booking-vet-name">Select time</h3>
+        </div>
+        <button class="vet-modal-close" id="booking-close" aria-label="Close booking">&times;</button>
+      </div>
+      <div class="vet-modal-body">
+        <form id="booking-form">
+          <input type="hidden" id="booking-vet-id" name="vet">
+          <input type="hidden" id="booking-availability" name="availability">
+          <input type="hidden" id="booking-date" name="date">
+          <div class="vet-calendar">
+            <div class="vet-calendar-header">
+              <button type="button" class="vet-calendar-nav" id="cal-prev" aria-label="Previous month">&larr;</button>
+              <div class="vet-calendar-month" id="cal-month"></div>
+              <button type="button" class="vet-calendar-nav" id="cal-next" aria-label="Next month">&rarr;</button>
+            </div>
+            <div class="vet-calendar-grid" id="cal-grid"></div>
+          </div>
+          <div class="vet-form-group" style="margin-top: 12px;">
+            <label class="vet-form-label" for="booking-time">Time</label>
+            <div id="booking-slots" class="vet-slot-grid"></div>
+            <input class="vet-form-control" type="time" id="booking-time" name="time" style="margin-top: 8px;" required>
+          </div>
+          <div class="vet-form-group">
+            <label class="vet-form-label" for="booking-notes">Notes for vet (optional)</label>
+            <textarea class="vet-form-control" id="booking-notes" name="notes" rows="3" placeholder="Brief symptom or request"></textarea>
+          </div>
+          <div class="vet-modal-actions">
+            <button type="button" class="vet-btn vet-btn-secondary" id="booking-cancel">Cancel</button>
+            <button type="submit" class="vet-btn vet-btn-primary">Confirm Booking</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      // Redirect to triage if no summary present
+      // Allow booking even if triage flags are missing (prevents empty vet dashboard)
+
+      const modal = document.getElementById('booking-modal');
+      const closeBtn = document.getElementById('booking-close');
+      const cancelBtn = document.getElementById('booking-cancel');
+      const form = document.getElementById('booking-form');
+      const vetNameEl = document.getElementById('booking-vet-name');
+      const vetIdEl = document.getElementById('booking-vet-id');
+      const availabilityEl = document.getElementById('booking-availability');
+      const dateEl = document.getElementById('booking-date');
+      const timeEl = document.getElementById('booking-time');
+      const notesEl = document.getElementById('booking-notes');
+      const slotsEl = document.getElementById('booking-slots');
+      const monthEl = document.getElementById('cal-month');
+      const gridEl = document.getElementById('cal-grid');
+      const prevBtn = document.getElementById('cal-prev');
+      const nextBtn = document.getElementById('cal-next');
+
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const hh = String(today.getHours()).padStart(2, '0');
+      const min = String(today.getMinutes()).padStart(2, '0');
+      const todayStr = `${yyyy}-${mm}-${dd}`;
+      timeEl.value = `${hh}:${min}`;
+      let currentMonth = today.getMonth();
+      let currentYear = today.getFullYear();
+      let selectedDate = new Date(today.getTime());
+      let selectedSlot = null;
+
+      function renderCalendar(month, year) {
+        const firstDay = new Date(year, month).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'long' });
+        monthEl.textContent = `${monthName} ${year}`;
+        gridEl.innerHTML = '';
+
+        const dayLabels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        dayLabels.forEach(label => {
+          const lbl = document.createElement('div');
+          lbl.textContent = label;
+          lbl.style.fontWeight = '600';
+          lbl.style.color = '#64748b';
+          lbl.style.fontSize = '0.85rem';
+          gridEl.appendChild(lbl);
+        });
+
+        for (let i = 0; i < firstDay; i++) {
+          const emptyCell = document.createElement('div');
+          emptyCell.className = 'vet-cal-cell disabled';
+          emptyCell.style.visibility = 'hidden';
+          gridEl.appendChild(emptyCell);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const cellDate = new Date(year, month, day);
+          const cell = document.createElement('div');
+          cell.className = 'vet-cal-cell';
+          cell.textContent = day;
+
+          const cellISO = cellDate.toISOString().split('T')[0];
+          const isPast = cellISO < todayStr;
+          if (isPast) {
+            cell.classList.add('disabled');
+          } else {
+            cell.addEventListener('click', () => {
+              selectedDate = cellDate;
+              if (dateEl) dateEl.value = cellISO;
+              document.querySelectorAll('.vet-cal-cell.selected').forEach(el => el.classList.remove('selected'));
+              cell.classList.add('selected');
+            });
+          }
+
+          const selectedISO = selectedDate.toISOString().split('T')[0];
+          if (cellISO === selectedISO) {
+            cell.classList.add('selected');
+          }
+
+          gridEl.appendChild(cell);
+        }
+      }
+
+      function changeMonth(delta) {
+        currentMonth += delta;
+        if (currentMonth < 0) {
+          currentMonth = 11;
+          currentYear -= 1;
+        } else if (currentMonth > 11) {
+          currentMonth = 0;
+          currentYear += 1;
+        }
+        renderCalendar(currentMonth, currentYear);
+      }
+
+      function openModal(vetId, vetName, availability, type, slotString) {
+        vetNameEl.textContent = `Book with ${vetName}`;
+        vetIdEl.value = vetId;
+        availabilityEl.value = availability || 'now';
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        selectedDate = new Date(today.getTime());
+        if (dateEl) dateEl.value = selectedDate.toISOString().split('T')[0];
+        if (type === 'now') {
+          timeEl.value = `${hh}:${min}`;
+        }
+        renderSlots(slotString);
+        renderCalendar(currentMonth, currentYear);
+      }
+
+      function closeModal() {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+      }
+
+      document.querySelectorAll('.booking-trigger').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openModal(
+            btn.dataset.vet,
+            btn.dataset.vetname,
+            btn.dataset.availability,
+            btn.dataset.type,
+            btn.dataset.slots
+          );
+        });
+      });
+
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      prevBtn.addEventListener('click', () => changeMonth(-1));
+      nextBtn.addEventListener('click', () => changeMonth(1));
+
+      renderCalendar(currentMonth, currentYear);
+      renderSlots();
+
+      function loadBookings() {
+        try {
+          return JSON.parse(localStorage.getItem('vetai_bookings')) || [];
+        } catch (e) {
+          return [];
+        }
+      }
+
+      function saveBookings(list) {
+        localStorage.setItem('vetai_bookings', JSON.stringify(list));
+      }
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const bookingId = `booking-${Date.now()}`;
+        const dateVal = dateEl.value || selectedDate.toISOString().split('T')[0];
+        const timeVal = timeEl.value;
+        const notesVal = notesEl.value;
+
+        const triageSummary = (() => {
+          try { return JSON.parse(sessionStorage.getItem('vetai_triage_summary')) || []; } catch (e) { return []; }
+        })();
+        const petInfo = (() => {
+          try { return JSON.parse(sessionStorage.getItem('vetai_pet_info')) || null; } catch (e) { return null; }
+        })() || { name: 'Your Pet', type: 'Unknown', age: 'Not specified' };
+
+        const bookings = loadBookings();
+        bookings.push({
+          id: bookingId,
+          vetId: vetIdEl.value,
+          vetName: vetNameEl.textContent.replace('Book with ', ''),
+          availability: availabilityEl.value,
+          date: dateVal,
+          time: timeVal,
+          notes: notesVal,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+          triageSummary,
+          petInfo
+        });
+        saveBookings(bookings);
+        sessionStorage.setItem('vetai_active_booking', bookingId);
+
+        const params = new URLSearchParams({
+          vet: vetIdEl.value,
+          availability: availabilityEl.value,
+          date: dateVal,
+          time: timeVal,
+          notes: notesVal,
+          bookingId
+        });
+        window.location.href = `waiting-room.html?${params.toString()}`;
+      });
+
+      function renderSlots(slotString) {
+        slotsEl.innerHTML = '';
+        selectedSlot = null;
+        const slots = (slotString || '').split(',').map(s => s.trim()).filter(Boolean);
+        if (!slots.length) {
+          timeEl.value = `${hh}:${min}`;
+          return;
+        }
+        slots.forEach(slot => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'vet-slot';
+          btn.textContent = slot === 'now' ? 'Now' : slot;
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.vet-slot.selected').forEach(el => el.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedSlot = slot;
+            if (slot === 'now') {
+              timeEl.value = `${hh}:${min}`;
+            } else {
+              timeEl.value = slot;
+            }
+          });
+          slotsEl.appendChild(btn);
+        });
+        if (slotsEl.firstChild) {
+          slotsEl.firstChild.click();
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

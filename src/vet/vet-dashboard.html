@@ -175,6 +175,17 @@
         <i class="fas fa-sync-alt"></i>
         Auto-refreshing every 3 seconds
       </div>
+
+      <!-- Ready to Call -->
+      <h3 style="margin: 25px 0 12px; color: var(--vet-text-dark);" id="ready-header">
+        <i class="fas fa-video" style="color: var(--vet-primary); margin-right: 10px;"></i>
+        Ready to Call
+      </h3>
+      <div id="ready-calls">
+        <div class="no-calls">
+          <p>No triaged calls yet.</p>
+        </div>
+      </div>
     </main>
 
     <!-- Footer Note -->
@@ -222,15 +233,16 @@
       setTimeout(() => toast.classList.remove('show'), duration);
     }
 
-    // Check authentication
+    // Check authentication (fallback demo session if missing)
     function checkAuth() {
       const session = sessionStorage.getItem('vetai_vet_session');
       if (!session) {
-        window.location.href = 'vet-login.html';
-        return false;
+        vetSession = { name: 'Dr. Demo Vet', id: 'demo' };
+        sessionStorage.setItem('vetai_vet_session', JSON.stringify(vetSession));
+      } else {
+        vetSession = JSON.parse(session);
       }
-      vetSession = JSON.parse(session);
-      vetName.textContent = vetSession.name;
+      vetName.textContent = vetSession.name || 'Veterinarian';
       return true;
     }
 
@@ -248,32 +260,26 @@
       return `${Math.floor(seconds / 3600)} hr ago`;
     }
 
-    // Fetch pending calls from server
-    async function fetchPendingCalls() {
-      try {
-        const res = await fetch('/api/vet-calls/pending');
-        if (res.ok) {
-          const data = await res.json();
-          // Transform API data to display format
-          return (data.calls || []).map(call => ({
-            id: call.channelName,
-            channelName: call.channelName,
-            petName: call.petInfo?.petName || 'Unknown Pet',
-            petType: call.petInfo?.petType || 'Unknown',
-            petAge: call.petInfo?.petAge || 'Unknown age',
-            petEmoji: getPetEmoji(call.petInfo?.petType),
-            urgency: call.triageSummary?.urgency || 'medium',
-            symptoms: call.triageSummary?.symptoms?.join(', ') || 'Not specified',
-            timestamp: call.requestTime,
-            waitTime: call.waitTime
-          }));
-        }
-      } catch (e) {
-        console.log('Server API not available, using mock data');
-      }
-      
-      // Return mock/demo calls if server API not available
-      return getMockCalls();
+    function fetchPendingCalls() {
+      const bookings = (() => {
+        try { return JSON.parse(localStorage.getItem('vetai_bookings')) || []; } catch (e) { return []; }
+      })();
+      return bookings
+        .filter(b => b.status === 'pending')
+        .map(b => ({
+          id: b.id,
+          channelName: b.id,
+          petName: b.petInfo?.name || 'Pet',
+          petType: b.petInfo?.typeName || b.petInfo?.type || 'Unknown',
+          petAge: b.petInfo?.age || 'Unknown age',
+          petEmoji: getPetEmoji(b.petInfo?.type || ''),
+          urgency: 'medium',
+          symptoms: b.notes || 'Not specified',
+          timestamp: b.createdAt || new Date().toISOString(),
+          waitTime: b.time,
+          vetName: b.vetName,
+          triageSummary: b.triageSummary || []
+        }));
     }
 
     // Get pet emoji
@@ -286,18 +292,17 @@
     }
 
     // Mock calls for demo (when server API isn't set up)
-    function getMockCalls() {
-      const storedCall = localStorage.getItem('vetai_pending_call');
-      if (storedCall) {
-        try {
-          const call = JSON.parse(storedCall);
-          return [call];
-        } catch (e) {}
+    function updateBookingStatus(id, status) {
+      const bookings = (() => {
+        try { return JSON.parse(localStorage.getItem('vetai_bookings')) || []; } catch (e) { return []; }
+      })();
+      const idx = bookings.findIndex(b => b.id === id);
+      if (idx >= 0) {
+        bookings[idx].status = status;
+        localStorage.setItem('vetai_bookings', JSON.stringify(bookings));
       }
-      return [];
     }
 
-    // Render calls
     function renderCalls(calls) {
       // Update stats
       pendingCount.textContent = calls.length;
@@ -331,49 +336,130 @@
             </div>
           </div>
           <div class="call-symptoms">
-            <strong>Symptoms:</strong> ${call.symptoms || 'No symptoms recorded'}
+            <strong>Notes:</strong> ${call.symptoms || 'No notes recorded'}
           </div>
+          ${call.triageSummary?.length ? `
+            <div class="call-symptoms" style="margin-top: 8px;">
+              <strong>Triage summary:</strong>
+              <ul style="margin: 6px 0 0 18px; padding: 0;">
+                ${call.triageSummary.map(t => `<li>${t}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
           <div class="vet-urgency vet-urgency-${call.urgency || 'medium'}" style="margin-bottom: 15px;">
             <i class="fas fa-exclamation-circle"></i>
             ${call.urgency === 'high' ? 'High Priority' : call.urgency === 'low' ? 'Low Priority' : 'Medium Priority'}
           </div>
-          <button class="vet-btn vet-btn-primary" onclick="acceptCall('${call.channelName || FIXED_CALL_CHANNEL}', '${call.id || '1'}')">
-            <i class="fas fa-phone"></i>
-            Accept Call
-          </button>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="vet-btn vet-btn-primary" onclick="acceptCall('${call.channelName || FIXED_CALL_CHANNEL}', '${call.id || '1'}')">
+              <i class="fas fa-phone"></i>
+              Accept
+            </button>
+            <button class="vet-btn vet-btn-secondary" onclick="declineCall('${call.id || '1'}')">
+              <i class="fas fa-times"></i>
+              Decline
+            </button>
+          </div>
         </div>
       `).join('');
     }
 
-    // Accept a call
-    async function acceptCall(channelName, callId) {
-      try {
-        // Notify server that vet accepted the call
-        await fetch(`/api/vet-calls/accept/${channelName}`, { method: 'POST' });
-      } catch (e) {
-        console.log('Could not notify server, proceeding anyway');
+    function fetchReadyCalls() {
+      const bookings = (() => {
+        try { return JSON.parse(localStorage.getItem('vetai_bookings')) || []; } catch (e) { return []; }
+      })();
+      return bookings
+        .filter(b => ['triaged', 'accepted', 'calling'].includes(b.status))
+        .map(b => ({
+          id: b.id,
+          channelName: b.id,
+          petName: b.petInfo?.name || 'Pet',
+          petType: b.petInfo?.typeName || b.petInfo?.type || 'Unknown',
+          petAge: b.petInfo?.age || 'Unknown age',
+          petEmoji: getPetEmoji(b.petInfo?.type || ''),
+          triageSummary: b.triageSummary || [],
+          timestamp: b.createdAt || new Date().toISOString(),
+          time: b.time,
+          notes: b.notes,
+          vetName: b.vetName
+        }));
+    }
+
+    function renderReady(calls) {
+      const container = document.getElementById('ready-calls');
+
+      if (!container) return;
+      if (!calls.length) {
+        container.innerHTML = `<div class="no-calls"><p>No triaged calls yet.</p></div>`;
+        return;
       }
-      
-      // Store call info for the call page
+
+      container.innerHTML = calls.map(call => `
+        <div class="call-card" style="border-left-color: var(--vet-primary);">
+          <div class="call-header">
+            <div class="call-pet-info">
+              <div class="call-pet-avatar">${call.petEmoji || '🐾'}</div>
+              <div>
+                <strong>${call.petName || 'Pet'}</strong>
+                <div style="font-size: 0.85rem; color: var(--vet-text-muted);">
+                  ${call.petType || 'Unknown'} • ${call.petAge || 'Age unknown'}
+                </div>
+              </div>
+            </div>
+            <div class="call-time">
+              <i class="fas fa-clock"></i> ${call.time || 'Scheduled'}
+            </div>
+          </div>
+          ${call.triageSummary?.length ? `
+            <div class="call-symptoms">
+              <strong>Triage summary:</strong>
+              <ul style="margin: 6px 0 0 18px; padding: 0;">
+                ${call.triageSummary.map(t => `<li>${t}</li>`).join('')}
+              </ul>
+            </div>
+          ` : ''}
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="vet-btn vet-btn-primary" onclick="startCall('${call.channelName || call.id}')">
+              <i class="fas fa-phone"></i>
+              Call Pet Owner
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Accept a call (booking)
+    function acceptCall(channelName, callId) {
+      updateBookingStatus(callId, 'accepted');
+      // Do not jump to call; wait for triage to complete and appear in Ready to Call
+      pollCalls();
+    }
+
+    function declineCall(callId) {
+      updateBookingStatus(callId, 'declined');
+      pollCalls();
+    }
+
+    function startCall(channelName) {
+      updateBookingStatus(channelName, 'calling');
+      sessionStorage.setItem('vetai_active_booking', channelName || FIXED_CALL_CHANNEL);
+      localStorage.setItem('vetai_call_channel', channelName || FIXED_CALL_CHANNEL);
+      sessionStorage.setItem('vetai_call_channel', channelName || FIXED_CALL_CHANNEL);
       sessionStorage.setItem('vetai_active_call', JSON.stringify({
         channelName: channelName || FIXED_CALL_CHANNEL,
-        callId: callId,
+        callId: channelName || FIXED_CALL_CHANNEL,
         vetUid: VET_UID,
         userUid: USER_UID
       }));
-      
-      // Mark call as accepted (notify server or localStorage)
-      localStorage.setItem('vetai_call_accepted', 'true');
-      localStorage.setItem('vetai_call_channel', channelName || FIXED_CALL_CHANNEL);
-      
-      // Go to call page
       window.location.href = 'vet-call.html';
     }
 
     // Poll for new calls
     async function pollCalls() {
-      const calls = await fetchPendingCalls();
+      const calls = fetchPendingCalls();
       renderCalls(calls);
+      const ready = fetchReadyCalls();
+      renderReady(ready);
     }
 
     // Initialize

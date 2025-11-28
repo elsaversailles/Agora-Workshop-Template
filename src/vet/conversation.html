@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Consultation - VetAI Triage</title>
+  <title>AI Triage - Paws+</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="vet.css">
   <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
@@ -14,9 +14,9 @@
     <header class="vet-header">
       <div class="vet-logo">
         <i class="fas fa-paw"></i>
-        <span>VetAI Triage</span>
+        <span>Paws+</span>
       </div>
-      <p class="vet-subtitle">AI Consultation in Progress</p>
+      <p class="vet-subtitle">AI Triage in Progress</p>
     </header>
 
     <!-- Main Content -->
@@ -59,17 +59,21 @@
           </div>
         </div>
 
-        <!-- Controls -->
-        <div class="vet-controls">
-          <button class="vet-control-btn vet-control-btn-mute" id="mute-btn" title="Mute/Unmute" disabled>
-            <i class="fas fa-microphone"></i>
-          </button>
-          <button class="vet-control-btn vet-control-btn-video" id="video-btn" title="Camera On/Off" disabled>
-            <i class="fas fa-video"></i>
-          </button>
-          <button class="vet-control-btn vet-control-btn-end" id="end-btn" title="End Conversation">
-            <i class="fas fa-phone-slash"></i>
-          </button>
+        <!-- Triage states -->
+        <div class="vet-summary-section" id="triage-progress">
+          <h4><i class="fas fa-robot"></i> AI Triage</h4>
+          <p id="triage-status">Understanding your pet's lifestyle, history, allergies, behavior, reason for consult, and home care...</p>
+        </div>
+
+        <div class="vet-summary-section" id="triage-summary" style="display:none;">
+          <h4><i class="fas fa-clipboard-check"></i> Triage Summary</h4>
+          <ul id="triage-points" style="padding-left: 18px; margin: 8px 0;"></ul>
+        </div>
+
+        <div class="vet-btn-group" style="justify-content: center; margin-top: 16px;" id="post-triage-actions" hidden>
+          <a class="vet-btn vet-btn-primary" id="book-vet" href="book-vet.html">
+            <i class="fas fa-user-md"></i> Book a Vet
+          </a>
         </div>
       </div>
     </main>
@@ -106,5 +110,51 @@
   </div>
 
   <script src="conversation.js"></script>
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const bookingId = params.get('bookingId') || sessionStorage.getItem('vetai_active_booking');
+      sessionStorage.setItem('vetai_active_booking', bookingId || '');
+      const bookings = (() => { try { return JSON.parse(localStorage.getItem('vetai_bookings')) || []; } catch (e) { return []; }})();
+      const booking = bookingId ? bookings.find(b => b.id === bookingId) : null;
+      const triageProgress = document.getElementById('triage-progress');
+      const triageSummary = document.getElementById('triage-summary');
+      const triagePoints = document.getElementById('triage-points');
+      const actions = document.getElementById('post-triage-actions');
+      const bookLink = document.getElementById('book-vet');
+      if (bookingId) {
+        bookLink.href = `index.html?bookingId=${bookingId}`;
+      }
+
+      const dummySummary = [
+        'Lifestyle & idiosyncrasies: Indoor-only, calm; consistent meals; normal activity.',
+        'Medical history: Vaccines current; no chronic meds; mild seasonal itch history.',
+        'Owner insights: No food allergies known; behavior normal; no exposure risks noted.',
+        'Reason for consult: Loose stool twice today; no vomiting; hydrated; playful.',
+        'Home management tried: Bland diet started; monitoring water intake and stool.',
+        'Plan: Likely mild GI upset; monitor energy/hydration; red flags = vomiting, blood in stool, lethargy.'
+      ];
+
+      setTimeout(() => {
+        triageProgress.style.display = 'none';
+        triageSummary.style.display = 'block';
+        triagePoints.innerHTML = dummySummary.map(item => `<li>${item}</li>`).join('');
+        actions.hidden = false;
+        sessionStorage.setItem('vetai_triage_summary', JSON.stringify(dummySummary));
+        sessionStorage.setItem('vetai_triage_ready', 'true');
+        if (bookingId) {
+          const idx = bookings.findIndex(b => b.id === bookingId);
+          if (idx >= 0) {
+            bookings[idx].status = 'triaged';
+            bookings[idx].triageSummary = dummySummary;
+            if (!bookings[idx].petInfo) {
+              bookings[idx].petInfo = { name: 'Your Pet', type: 'Unknown', age: 'Not specified' };
+            }
+            localStorage.setItem('vetai_bookings', JSON.stringify(bookings));
+          }
+        }
+      }, 5000);
+    })();
+  </script>
 </body>
 </html>

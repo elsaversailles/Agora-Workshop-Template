@@ -24,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static files
 app.use(express.static(dir));
+app.use('/vet', express.static(path.join(__dirname, "../src/vet")));
 
 // Root route
 app.get("/", (req, res) => {
