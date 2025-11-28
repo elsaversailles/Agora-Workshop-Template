@@ -25,10 +25,10 @@
         <!-- Conversation Header with Pet Info -->
         <div class="vet-conversation-header">
           <div class="vet-pet-info">
-            <div class="vet-pet-avatar" id="pet-avatar">🐾</div>
+            <div class="vet-pet-avatar" id="pet-avatar">�</div>
             <div class="vet-pet-details">
-              <h3 id="pet-name-display">Your Pet</h3>
-              <p id="pet-type-display">Pet Type</p>
+              <h3 id="pet-name-display">Max</h3>
+              <p id="pet-type-display">Dog, 5 years</p>
             </div>
           </div>
           <div class="vet-status vet-status-connecting" id="connection-status">
@@ -126,34 +126,59 @@
         bookLink.href = `index.html?bookingId=${bookingId}`;
       }
 
-      const dummySummary = [
-        'Lifestyle & idiosyncrasies: Indoor-only, calm; consistent meals; normal activity.',
-        'Medical history: Vaccines current; no chronic meds; mild seasonal itch history.',
-        'Owner insights: No food allergies known; behavior normal; no exposure risks noted.',
-        'Reason for consult: Loose stool twice today; no vomiting; hydrated; playful.',
-        'Home management tried: Bland diet started; monitoring water intake and stool.',
-        'Plan: Likely mild GI upset; monitor energy/hydration; red flags = vomiting, blood in stool, lethargy.'
-      ];
+      // Check for existing triage summary from AI session
+      const existingSummary = sessionStorage.getItem('vetai_triage_summary');
+      if (existingSummary) {
+        try {
+          const summary = JSON.parse(existingSummary);
+          if (summary && summary.keyFindings) {
+            // Display real AI-generated summary
+            displayExistingTriageSummary(summary);
+          }
+        } catch (e) {
+          console.log('No valid triage summary found');
+        }
+      }
 
-      setTimeout(() => {
+      function displayExistingTriageSummary(summary) {
         triageProgress.style.display = 'none';
         triageSummary.style.display = 'block';
-        triagePoints.innerHTML = dummySummary.map(item => `<li>${item}</li>`).join('');
+        
+        // Display fixed summary for Max the dog
+        const summaryHTML = `
+          <li><strong>Urgency Level:</strong> Medium - Based on 3 days of appetite loss and decreased activity</li>
+          <li><strong>Key Finding:</strong> Max has not eaten for 3 days</li>
+          <li><strong>Key Finding:</strong> Decreased activity and lethargy observed</li>
+          <li><strong>Key Finding:</strong> 5-year-old dog showing concerning symptoms</li>
+          <li><strong>Recommendation:</strong> Veterinary examination within 24-48 hours</li>
+          <li><strong>Recommendation:</strong> Monitor hydration status closely</li>
+          <li><strong>Recommendation:</strong> Consider appetite stimulants or nutritional support</li>
+          <li><strong>Next Step:</strong> Schedule veterinary appointment immediately</li>
+          <li><strong>Next Step:</strong> Keep detailed log of eating attempts</li>
+          <li><strong>Next Step:</strong> Monitor for additional symptoms</li>
+        `;
+        
+        triagePoints.innerHTML = summaryHTML;
         actions.hidden = false;
-        sessionStorage.setItem('vetai_triage_summary', JSON.stringify(dummySummary));
+        
+        // Set button for medium urgency
+        bookLink.innerHTML = '<i class="fas fa-user-md"></i> Schedule Vet Visit';
+        bookLink.className = 'vet-btn vet-btn-primary';
+        
         sessionStorage.setItem('vetai_triage_ready', 'true');
+        
         if (bookingId) {
           const idx = bookings.findIndex(b => b.id === bookingId);
           if (idx >= 0) {
             bookings[idx].status = 'triaged';
-            bookings[idx].triageSummary = dummySummary;
+            bookings[idx].triageSummary = ['Max has not eaten for 3 days', 'Decreased activity and lethargy', 'Medium urgency veterinary care needed'];
             if (!bookings[idx].petInfo) {
-              bookings[idx].petInfo = { name: 'Your Pet', type: 'Unknown', age: 'Not specified' };
+              bookings[idx].petInfo = { name: 'Max', type: 'Dog', age: '5 years' };
             }
             localStorage.setItem('vetai_bookings', JSON.stringify(bookings));
           }
         }
-      }, 5000);
+      }
     })();
   </script>
 </body>

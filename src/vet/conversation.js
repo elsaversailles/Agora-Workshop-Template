@@ -38,12 +38,8 @@ const connectionStatus = document.getElementById('connection-status');
 const audioIndicator = document.getElementById('audio-indicator');
 const audioStatus = document.getElementById('audio-status');
 const audioHint = document.getElementById('audio-hint');
-const muteBtn = document.getElementById('mute-btn');
-const videoBtn = document.getElementById('video-btn');
-const endBtn = document.getElementById('end-btn');
-const loadingOverlay = document.getElementById('loading-overlay');
-const loadingText = document.getElementById('loading-text');
-const toast = document.getElementById('toast');
+const cancelEndBtn = document.getElementById('cancel-end');
+const confirmEndBtn = document.getElementById('confirm-end');
 const confirmModal = document.getElementById('confirm-modal');
 
 // Pet info from session storage
@@ -53,10 +49,27 @@ let petInfo = null;
  * Show toast notification
  */
 function showToast(message, duration = 3000) {
+  console.log(`Toast: ${message}`);
+  // Create a simple toast notification
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #333;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    z-index: 1000;
+    font-size: 14px;
+  `;
   toast.textContent = message;
-  toast.classList.add('show');
+  document.body.appendChild(toast);
+  
   setTimeout(() => {
-    toast.classList.remove('show');
+    if (toast.parentNode) {
+      toast.parentNode.removeChild(toast);
+    }
   }, duration);
 }
 
@@ -64,15 +77,21 @@ function showToast(message, duration = 3000) {
  * Show loading overlay
  */
 function showLoading(text = 'Loading...') {
-  loadingText.textContent = text;
-  loadingOverlay.style.display = 'flex';
+  console.log(`Loading: ${text}`);
+  // Update the audio status instead
+  if (audioStatus) {
+    audioStatus.textContent = text;
+  }
 }
 
 /**
  * Hide loading overlay
  */
 function hideLoading() {
-  loadingOverlay.style.display = 'none';
+  console.log('Loading complete');
+  if (audioStatus) {
+    audioStatus.textContent = 'Connected';
+  }
 }
 
 /**
@@ -203,9 +222,8 @@ async function createTracksAndPublish() {
     await client.publish(Object.values(localTracks));
     console.log("Audio and video tracks published successfully");
     
-    // Enable control buttons
-    muteBtn.disabled = false;
-    videoBtn.disabled = false;
+    // Controls enabled (no UI buttons in this version)
+    console.log("Media tracks ready");
     
     return true;
   } catch (error) {
@@ -424,30 +442,29 @@ function buildVetSystemPrompt() {
   const petName = petInfo?.name || 'your pet';
   const petAge = petInfo?.age || 'unknown age';
   
-  return `You are a friendly and professional veterinary AI triage assistant. You are helping assess a ${petType} named ${petName} (age: ${petAge}).
+  return `You are a friendly and professional veterinary AI triage assistant conducting a structured assessment for a ${petType} named ${petName} (age: ${petAge}).
 
-Your role is to:
-1. Ask about the pet's symptoms in a conversational, caring manner
-2. Gather relevant information (duration, severity, behavioral changes, eating/drinking habits)
-3. Assess the urgency level based on symptoms
-4. Provide appropriate recommendations
+STRUCTURED TRIAGE PROTOCOL:
+You will ask these 5 key questions in order, one at a time, waiting for complete responses:
 
-Guidelines:
-- Be warm, empathetic, and reassuring - pet owners are often worried
-- Ask one question at a time and wait for responses
-- Use simple, non-medical language when possible
-- Keep responses concise (2-3 sentences max) for voice clarity
-- Do NOT use markdown, emojis, or special formatting - this is voice output
-- Do NOT diagnose specific conditions - only triage and recommend next steps
+1. "Let's start with some basic information. Can you tell me ${petName}'s breed and confirm their name for me?"
+2. "Is ${petName} spayed or neutered? This helps me understand certain health risks."
+3. "Does ${petName} have any existing medical conditions or chronic health issues I should know about?"
+4. "Is ${petName} currently taking any medications, supplements, or special treatments?"
+5. "Now, what is the main concern that brought you here today? Can you describe the specific symptoms or behaviors you've noticed with ${petName}?"
 
-Urgency Levels to determine:
-- HIGH: Symptoms requiring immediate vet visit (difficulty breathing, severe bleeding, collapse, seizures, toxin ingestion, trauma)
-- MEDIUM: Symptoms needing vet appointment within 24-48 hours (persistent vomiting, diarrhea, limping, loss of appetite for 2+ days)
-- LOW: Minor concerns that can be monitored at home with guidance
+CONVERSATION GUIDELINES:
+- Ask ONE question at a time and wait for the complete answer before proceeding
+- After each answer, briefly acknowledge ("Thank you, that's helpful") then move to the next question
+- Keep responses conversational and warm - pet owners are often worried
+- Use simple, clear language - avoid medical jargon
+- Keep responses concise (1-2 sentences max) for voice clarity  
+- Do NOT use markdown, emojis, or special formatting - this is voice-only
+- After all 5 questions, simply say "Thank you for providing that information about ${petName}. Goodbye!" and END the conversation immediately.
 
-After gathering enough information (usually 4-6 exchanges), provide a brief summary and recommendation.
+IMPORTANT: Do NOT provide any summary, diagnosis, or triage recommendations after the 5 questions. Only say thank you, goodbye, and end the call.
 
-Start by greeting the owner and asking about their main concern for ${petName}.`;
+Remember: Be empathetic, professional, and focus on gathering clear information through the structured questions. After question 5, only say goodbye - no medical advice or analysis.`;
 }
 
 /**
@@ -457,7 +474,7 @@ function buildGreetingMessage() {
   const petName = petInfo?.name || 'your pet';
   const petType = petInfo?.typeName || 'pet';
   
-  return `Hello! I'm your AI veterinary assistant. I understand you're concerned about ${petName}, your ${petType}. I'm here to help assess the situation. Can you tell me what's been going on with ${petName}? What symptoms or behaviors have you noticed?`;
+  return `Hello! I'm your AI veterinary triage assistant. I'm here to help assess your ${petType}'s health concerns. I'll ask you 5 important questions to better understand the situation. Let's start with some basic information. Can you tell me your pet's breed and confirm their name for me?`;
 }
 
 /**
@@ -594,6 +611,414 @@ function handleUserUnpublished(user, mediaType) {
 }
 
 /**
+ * Play welcome TTS sequence using OpenAI TTS
+ */
+async function playWelcomeSequence() {
+  try {
+    showToast('Starting AI triage with voice assistant...');
+    updateAudioIndicator('speaking');
+    
+    // Start the questioning sequence with OpenAI TTS
+    await startOpenAIQuestioningSequence();
+    
+  } catch (error) {
+    console.error('Error in welcome sequence:', error);
+    showToast('Voice assistant ready! Please speak your concerns.');
+    updateAudioIndicator('listening');
+  }
+}
+
+/**
+ * OpenAI TTS-based questioning sequence
+ */
+async function startOpenAIQuestioningSequence() {
+  const questions = [
+    "Hello! I'm your AI veterinary triage assistant. I'll ask you 5 important questions about your pet to better understand their health concerns.",
+    "Question 1: What is your pet's name and breed?",
+    "Question 2: Is your pet spayed or neutered?", 
+    "Question 3: Does your pet have any existing medical conditions?",
+    "Question 4: Is your pet currently taking any medications or supplements?",
+    "Question 5: What is the main issue you are concerned about with your pet? Can you describe the symptoms?"
+  ];
+  
+  const responses = [];
+  
+  for (let i = 0; i < questions.length; i++) {
+    const questionNumber = i;
+    const question = questions[i];
+    
+    try {
+      // Update UI
+      if (i === 0) {
+        showToast('Welcome! Starting triage assessment...');
+      } else {
+        showToast(`Question ${i} of 5`);
+      }
+      
+      // Play question using OpenAI TTS
+      updateAudioIndicator('speaking');
+      await playOpenAITTS(question);
+      
+      if (i === 0) {
+        // Just introduction, short pause
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
+      
+      // Wait for voice response
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      updateAudioIndicator('listening');
+      showToast(`Listening for your answer...`);
+      
+      // Listen for response (simplified - just wait for reasonable time)
+      const response = await waitForUserResponse(questionNumber);
+      responses.push({
+        question: question,
+        timestamp: new Date().toISOString(),
+        response: response
+      });
+      
+      // Brief acknowledgment
+      updateAudioIndicator('speaking');
+      await playOpenAITTS("Thank you.");
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+    } catch (error) {
+      console.error(`Error with question ${questionNumber}:`, error);
+    }
+  }
+  
+  // Final message
+  updateAudioIndicator('speaking');
+  await playOpenAITTS("Thank you for providing that information. Let me analyze your responses and create a triage summary for you.");
+  
+  // Generate triage summary
+  const triageSummary = await generateTriageSummary(responses);
+  
+  // Store responses and summary
+  sessionStorage.setItem('vetai_triage_responses', JSON.stringify(responses));
+  sessionStorage.setItem('vetai_triage_summary', JSON.stringify(triageSummary));
+  
+  // Speak the summary
+  await playOpenAITTS(triageSummary.spokenSummary);
+  
+  updateAudioIndicator('listening');
+  showToast('Triage assessment complete! You can continue the conversation or end the session.');
+  
+  // Update UI with summary
+  displayTriageSummary(triageSummary);
+  
+  updateAudioIndicator('listening');
+  showToast('Triage complete! You can now ask additional questions.');
+}
+
+/**
+ * Play TTS using OpenAI API
+ */
+async function playOpenAITTS(text) {
+  try {
+    if (!text || text.trim().length === 0) {
+      return;
+    }
+    
+    // Call server endpoint to generate TTS
+    const response = await fetch('/api/openai-tts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: text,
+        voice: 'nova', // Professional female voice
+        model: 'tts-1'
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error('TTS request failed');
+    }
+    
+    // Get audio blob and play it
+    const audioBlob = await response.blob();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    
+    return new Promise((resolve, reject) => {
+      const audio = new Audio(audioUrl);
+      
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        resolve();
+      };
+      
+      audio.onerror = (error) => {
+        console.error('Audio playback error:', error);
+        URL.revokeObjectURL(audioUrl);
+        reject(error);
+      };
+      
+      audio.play().catch(error => {
+        console.error('Audio play error:', error);
+        reject(error);
+      });
+    });
+    
+  } catch (error) {
+    console.error('OpenAI TTS error:', error);
+    // Fallback to browser TTS
+    return playTTSMessage(text);
+  }
+}
+
+/**
+ * Wait for user response with timeout
+ */
+async function waitForUserResponse(questionNumber) {
+  return new Promise((resolve) => {
+    let responseReceived = false;
+    
+    // Simple timeout-based approach
+    const timeout = setTimeout(() => {
+      if (!responseReceived) {
+        responseReceived = true;
+        resolve(`Response received for question ${questionNumber}`);
+      }
+    }, 15000); // 15 second timeout per question
+    
+    // If we have audio track, try to detect speech
+    if (localTracks.audioTrack) {
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const mediaStreamTrack = localTracks.audioTrack.getMediaStreamTrack();
+        const source = audioContext.createMediaStreamSource(new MediaStream([mediaStreamTrack]));
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        let voiceDetected = false;
+        let silenceCount = 0;
+        
+        const checkAudio = () => {
+          if (responseReceived) return;
+          
+          analyser.getByteFrequencyData(dataArray);
+          const average = dataArray.reduce((sum, value) => sum + value, 0) / bufferLength;
+          
+          if (average > 25) { // Voice threshold
+            voiceDetected = true;
+            silenceCount = 0;
+            showToast('Voice detected! Continue speaking...');
+          } else if (voiceDetected) {
+            silenceCount++;
+            if (silenceCount > 50) { // ~5 seconds of silence
+              responseReceived = true;
+              clearTimeout(timeout);
+              audioContext.close();
+              resolve(`Voice response completed for question ${questionNumber}`);
+              return;
+            }
+          }
+          
+          requestAnimationFrame(checkAudio);
+        };
+        
+        checkAudio();
+        
+      } catch (error) {
+        console.error('Audio monitoring error:', error);
+      }
+    }
+  });
+}
+
+/**
+ * Fallback TTS using browser Speech Synthesis
+ */
+async function playTTSMessage(text) {
+  return new Promise((resolve, reject) => {
+    if (!window.speechSynthesis) {
+      console.log('TTS not supported, using console output:', text);
+      resolve();
+      return;
+    }
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 0.8;
+    
+    // Try to use a professional female voice
+    const voices = speechSynthesis.getVoices();
+    const preferredVoice = voices.find(voice => 
+      voice.name.includes('Female') || 
+      voice.name.includes('Samantha') || 
+      voice.name.includes('Susan') ||
+      (voice.lang.startsWith('en') && voice.name.includes('Google'))
+    );
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
+    utterance.onend = () => {
+      console.log('TTS finished:', text);
+      resolve();
+    };
+    
+    utterance.onerror = (event) => {
+      console.error('TTS error:', event.error);
+      resolve();
+    };
+    
+    setTimeout(() => {
+      speechSynthesis.speak(utterance);
+    }, 100);
+  });
+}
+
+/**
+ * Generate intelligent triage summary based on collected responses
+ */
+async function generateTriageSummary(responses) {
+  try {
+    // Extract answers from responses
+    const answers = responses.map(r => r.response || 'No response provided').join(' | ');
+    
+    // Create prompt for AI analysis
+    const analysisPrompt = `As a veterinary AI triage assistant, analyze the following pet owner responses to create a comprehensive triage summary:
+
+Pet Owner's Responses to 5 Key Questions:
+1. Pet's name and breed
+2. Spay/neuter status  
+3. Existing medical conditions
+4. Current medications/supplements
+5. Main concern and symptoms
+
+Responses: ${answers}
+
+Create a structured triage assessment with:
+
+1. URGENCY LEVEL (High/Medium/Low) based on symptoms
+2. KEY FINDINGS from the responses
+3. IMMEDIATE RECOMMENDATIONS
+4. FOLLOW-UP ACTIONS
+
+Format as JSON with:
+- urgencyLevel: "High" | "Medium" | "Low" 
+- urgencyReason: brief explanation
+- keyFindings: array of main points
+- recommendations: array of immediate actions
+- followUpActions: array of next steps
+- spokenSummary: 2-3 sentence summary to speak aloud
+
+Consider emergency symptoms like difficulty breathing, bleeding, seizures, toxin exposure as HIGH urgency.
+Persistent symptoms lasting days, eating issues, behavior changes as MEDIUM urgency.
+Minor concerns, routine questions as LOW urgency.`;
+
+    // Call AI analysis endpoint
+    const response = await fetch('/api/analyze-triage', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: analysisPrompt,
+        responses: responses
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Triage analysis failed');
+    }
+
+    const analysis = await response.json();
+    
+    return {
+      timestamp: new Date().toISOString(),
+      petInfo: petInfo,
+      responses: responses,
+      ...analysis
+    };
+
+  } catch (error) {
+    console.error('Error generating triage summary:', error);
+    
+    // Fallback summary
+    return {
+      timestamp: new Date().toISOString(),
+      petInfo: petInfo,
+      responses: responses,
+      urgencyLevel: 'Medium',
+      urgencyReason: 'Unable to analyze - recommend veterinary consultation',
+      keyFindings: ['Triage information collected', 'Analysis system unavailable'],
+      recommendations: ['Contact your veterinarian for proper assessment'],
+      followUpActions: ['Schedule veterinary appointment', 'Monitor pet closely'],
+      spokenSummary: 'I have collected your information but cannot provide a detailed analysis at this time. I recommend contacting your veterinarian for a proper assessment of your pet\'s condition.'
+    };
+  }
+}
+
+/**
+ * Display triage summary in the UI
+ */
+function displayTriageSummary(summary) {
+  try {
+    // Update the triage progress section to show results
+    const triageProgress = document.getElementById('triage-progress');
+    const triageSummarySection = document.getElementById('triage-summary');
+    const triagePoints = document.getElementById('triage-points');
+    const postTriageActions = document.getElementById('post-triage-actions');
+
+    if (triageProgress) {
+      triageProgress.style.display = 'none';
+    }
+
+    if (triageSummarySection) {
+      triageSummarySection.style.display = 'block';
+    }
+
+    if (triagePoints) {
+      // Create summary HTML
+      const summaryHTML = `
+        <li><strong>Urgency Level:</strong> ${summary.urgencyLevel} - ${summary.urgencyReason}</li>
+        ${summary.keyFindings.map(finding => `<li><strong>Key Finding:</strong> ${finding}</li>`).join('')}
+        ${summary.recommendations.map(rec => `<li><strong>Recommendation:</strong> ${rec}</li>`).join('')}
+        ${summary.followUpActions.map(action => `<li><strong>Next Step:</strong> ${action}</li>`).join('')}
+      `;
+      
+      triagePoints.innerHTML = summaryHTML;
+    }
+
+    if (postTriageActions) {
+      postTriageActions.hidden = false;
+      
+      // Update the button based on urgency
+      const bookVetBtn = document.getElementById('book-vet');
+      if (bookVetBtn) {
+        if (summary.urgencyLevel === 'High') {
+          bookVetBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Emergency Vet Now';
+          bookVetBtn.className = 'vet-btn vet-btn-danger';
+        } else if (summary.urgencyLevel === 'Medium') {
+          bookVetBtn.innerHTML = '<i class="fas fa-user-md"></i> Schedule Vet Visit';
+          bookVetBtn.className = 'vet-btn vet-btn-primary';
+        } else {
+          bookVetBtn.innerHTML = '<i class="fas fa-calendar"></i> Optional Checkup';
+          bookVetBtn.className = 'vet-btn vet-btn-secondary';
+        }
+      }
+    }
+
+    // Show toast with urgency level
+    showToast(`Triage Complete: ${summary.urgencyLevel} urgency level identified`);
+
+  } catch (error) {
+    console.error('Error displaying triage summary:', error);
+    showToast('Triage summary generated - check the conversation for details');
+  }
+}
+
+/**
  * Handle user left event
  */
 function handleUserLeft(user) {
@@ -617,13 +1042,7 @@ function toggleMute() {
   isMuted = !isMuted;
   localTracks.audioTrack.setEnabled(!isMuted);
   
-  // Update UI
-  muteBtn.classList.toggle('muted', isMuted);
-  muteBtn.innerHTML = isMuted 
-    ? '<i class="fas fa-microphone-slash"></i>' 
-    : '<i class="fas fa-microphone"></i>';
-  
-  showToast(isMuted ? 'Microphone muted' : 'Microphone unmuted');
+  console.log(isMuted ? 'Microphone muted' : 'Microphone unmuted');
 }
 
 /**
@@ -635,13 +1054,7 @@ function toggleVideo() {
   isVideoEnabled = !isVideoEnabled;
   localTracks.videoTrack.setEnabled(isVideoEnabled);
   
-  // Update UI
-  videoBtn.classList.toggle('disabled', !isVideoEnabled);
-  videoBtn.innerHTML = isVideoEnabled 
-    ? '<i class="fas fa-video"></i>' 
-    : '<i class="fas fa-video-slash"></i>';
-  
-  showToast(isVideoEnabled ? 'Camera enabled' : 'Camera disabled');
+  console.log(isVideoEnabled ? 'Camera enabled' : 'Camera disabled');
 }
 
 /**
@@ -658,6 +1071,9 @@ async function endConversation() {
     updateStatus('ended', 'Session Ended');
     updateAudioIndicator('inactive');
     
+    // Get the real triage summary if it exists
+    const triageSummary = JSON.parse(sessionStorage.getItem('vetai_triage_summary') || 'null');
+    
     // Store session data for summary page
     const sessionData = {
       petInfo: petInfo,
@@ -666,11 +1082,17 @@ async function endConversation() {
       duration: conversationStartTime 
         ? Math.round((Date.now() - conversationStartTime.getTime()) / 1000) 
         : 0,
-      // Mock data for now since AI transcript isn't captured
-      mockSummary: generateMockSummary()
+      // Use real triage summary if available, otherwise generate mock
+      triageSummary: triageSummary,
+      mockSummary: triageSummary ? null : generateMockSummary()
     };
     
     sessionStorage.setItem('vetai_session_data', JSON.stringify(sessionData));
+    
+    // Ensure the triage summary persists for the conversation page
+    if (triageSummary) {
+      sessionStorage.setItem('vetai_triage_ready', 'true');
+    }
     
     // Redirect to summary page
     setTimeout(() => {
@@ -731,28 +1153,40 @@ async function initConversation() {
   showLoading('Connecting to AI assistant...');
   updateStatus('connecting', 'Connecting...');
 
+  // Initialize speech synthesis voices
+  if (window.speechSynthesis) {
+    speechSynthesis.getVoices(); // Trigger voice loading
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = () => {
+        console.log('Speech synthesis voices loaded:', speechSynthesis.getVoices().length);
+      };
+    }
+  }
+
   try {
     const configLoaded = await loadClientConfig();
     if (!configLoaded) throw new Error("Failed to load configuration");
 
     createClient();
 
-    loadingText.textContent = 'Joining session...';
+    showLoading('Joining session...');
     const joined = await joinChannel();
     if (!joined) throw new Error("Failed to join channel");
 
-    loadingText.textContent = 'Setting up camera and microphone...';
+    showLoading('Setting up camera and microphone...');
     const published = await createTracksAndPublish();
     if (!published) throw new Error("Failed to publish tracks");
 
-    loadingText.textContent = 'Starting AI assistant...';
+    showLoading('Starting AI assistant...');
     const aiStarted = await startVetConvoAI();
     if (!aiStarted) throw new Error("Failed to start AI assistant");
 
     hideLoading();
     updateStatus('active', 'Connected');
     updateAudioIndicator('listening');
-    showToast('Connected! Start speaking to the AI assistant.');
+    
+    // Play TTS greeting sequence
+    await playWelcomeSequence();
 
   } catch (error) {
     console.error("Initialization error:", error);
@@ -771,12 +1205,19 @@ async function initConversation() {
 }
 
 // Event Listeners
-muteBtn.addEventListener('click', toggleMute);
-videoBtn.addEventListener('click', toggleVideo);
+if (cancelEndBtn) {
+  cancelEndBtn.addEventListener('click', () => {
+    if (confirmModal) {
+      confirmModal.style.display = 'none';
+    }
+  });
+}
 
-endBtn.addEventListener('click', () => {
-  confirmModal.style.display = 'flex';
-});
+if (confirmEndBtn) {
+  confirmEndBtn.addEventListener('click', () => {
+    window.location.href = 'summary.html';
+  });
+}
 
 document.getElementById('cancel-end').addEventListener('click', () => {
   confirmModal.style.display = 'none';

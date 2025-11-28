@@ -51,6 +51,11 @@
         <ul id="wait-transcript-list" style="padding-left: 18px; margin: 8px 0;"></ul>
       </div>
 
+      <div class="vet-summary-section" id="wait-call-analysis" style="margin-top: 10px; display: none;">
+        <h4><i class="fas fa-stethoscope"></i> Veterinary Analysis</h4>
+        <div id="wait-call-analysis-content"></div>
+      </div>
+
       <div class="vet-btn-group" style="margin-top: 18px;">
         <button class="vet-btn vet-btn-secondary" id="wait-cancel"><i class="fas fa-times"></i> Cancel</button>
         <button class="vet-btn vet-btn-primary" id="wait-refresh"><i class="fas fa-sync"></i> Refresh status</button>
@@ -81,6 +86,8 @@
       const triagePoints = document.getElementById('wait-triage-points');
       const transcriptSection = document.getElementById('wait-transcript');
       const transcriptList = document.getElementById('wait-transcript-list');
+      const callAnalysisSection = document.getElementById('wait-call-analysis');
+      const callAnalysisContent = document.getElementById('wait-call-analysis-content');
 
       function loadBookings() {
         try {
@@ -164,9 +171,85 @@
 
       refreshBtn.addEventListener('click', checkStatus);
 
+      // Render booking and start status polling
       renderBooking();
       checkStatus();
       startPolling();
+
+      // If a call recording was stored in sessionStorage, process it:
+      async function processStoredCall() {
+        try {
+          const audioBase64 = sessionStorage.getItem('vetai_call_audio');
+          if (!audioBase64) return;
+
+          // Avoid reprocessing
+          if (localStorage.getItem(`vetai_call_processed_${bookingId}`)) return;
+
+          // Post audio to server for transcription
+          const transRes = await fetch('/api/transcribe-call', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ audioBase64 })
+          });
+          const transJson = await transRes.json();
+          const transcript = transJson.transcript || '';
+
+          // Store transcript in booking
+          const bookings = loadBookings();
+          const bIndex = bookings.findIndex(b => b.id === bookingId);
+          if (bIndex >= 0) {
+            bookings[bIndex].transcript = bookings[bIndex].transcript || [];
+            bookings[bIndex].transcript.push(transcript);
+            localStorage.setItem('vetai_bookings', JSON.stringify(bookings));
+          }
+
+          // Update UI
+          transcriptSection.style.display = 'block';
+          transcriptList.innerHTML = (bookings[bIndex].transcript || []).map(t => `<li>${t}</li>`).join('');
+
+          // Ask server to analyze the transcript
+          const petInfo = JSON.parse(sessionStorage.getItem('vetai_pet_info') || 'null');
+          const triageSummary = bookings[bIndex].triageSummary || [];
+
+          const analyzeRes = await fetch('/api/analyze-call', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transcript, petInfo, triageSummary })
+          });
+          const analysis = await analyzeRes.json();
+
+          // Persist analysis to booking
+          if (bIndex >= 0) {
+            bookings[bIndex].consultSummary = analysis.readableNotes || analysis.callSummary || '';
+            bookings[bIndex].callAnalysis = analysis;
+            bookings[bIndex].status = 'summary-ready';
+            localStorage.setItem('vetai_bookings', JSON.stringify(bookings));
+          }
+
+          // Display analysis
+          if (analysis) {
+            callAnalysisSection.style.display = 'block';
+            callAnalysisContent.innerHTML = `
+              <p><strong>Urgency:</strong> ${analysis.urgencyLevel || 'Medium'}</p>
+              <p><strong>Vet Diagnosis:</strong> ${analysis.vetDiagnosis || 'N/A'}</p>
+              <p><strong>Treatment Plan:</strong> ${analysis.treatmentPlan || 'N/A'}</p>
+              <h5>Key Points</h5>
+              <ul>${(analysis.keyPoints || []).map(k => `<li>${k}</li>`).join('')}</ul>
+              <h5>Recommendations</h5>
+              <p>${(analysis.vetRecommendations || []).join ? (analysis.vetRecommendations.join('; ')) : (analysis.recommendations || '')}</p>
+            `;
+          }
+
+          // Mark processed so we don't do it again
+          localStorage.setItem(`vetai_call_processed_${bookingId}`, '1');
+
+        } catch (err) {
+          console.error('Failed to process stored call:', err);
+        }
+      }
+
+      // Start processing in background
+      processStoredCall();
     })();
   </script>
 </body>
